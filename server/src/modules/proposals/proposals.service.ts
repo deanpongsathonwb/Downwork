@@ -15,8 +15,8 @@ export class ProposalsService {
         bidAmount: dto.bidAmount,
         bidType: dto.bidType ?? 'fixed',
         estimatedDuration: dto.estimatedDuration,
-        milestones: dto.milestones ?? [],
-        answers: dto.answers ?? [],
+        milestones: (dto.milestones ?? []) as any,
+        answers: (dto.answers ?? []) as any,
       },
     });
 

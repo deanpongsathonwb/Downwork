@@ -73,7 +73,7 @@ export class JobsService {
         experienceLevel: dto.experienceLevel ?? 'intermediate',
         scope: dto.scope,
         visibility: dto.visibility ?? 'public',
-        screeningQuestions: dto.screeningQuestions ?? [],
+        screeningQuestions: (dto.screeningQuestions ?? []) as any,
         location: dto.location,
         featured: dto.featured ?? false,
         urgent: dto.urgent ?? false,
