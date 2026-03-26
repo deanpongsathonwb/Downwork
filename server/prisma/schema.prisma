@@ -5,7 +5,7 @@ generator client {
 // For local dev: sqlite | For production: postgresql
 // Change provider and DATABASE_URL in .env when deploying
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -68,13 +68,13 @@ model FreelancerProfile {
   bio            String?
   hourlyRate     Float?
   availability   String   @default("available")
-  skills         String   @default("[]")
-  categories     String   @default("[]")
-  experience     String   @default("[]")
-  education      String   @default("[]")
-  certifications String   @default("[]")
-  languages      String   @default("[]")
-  portfolioItems String   @default("[]")
+  skills   Json     @default("[]")
+  categories   Json     @default("[]")
+  experience   Json     @default("[]")
+  education   Json     @default("[]")
+  certifications   Json     @default("[]")
+  languages   Json     @default("[]")
+  portfolioItems   Json     @default("[]")
   totalEarnings  Float    @default(0)
   completedJobs  Int      @default(0)
   successRate    Float    @default(0)
@@ -129,7 +129,7 @@ model Job {
   description      String
   category         String
   subcategory      String?
-  skills           String   @default("[]")
+  skills   Json     @default("[]")
   budgetType       String   @default("fixed")
   budgetMin        Float?
   budgetMax        Float?
@@ -139,8 +139,8 @@ model Job {
   scope            String?
   visibility       String   @default("public")
   status           String   @default("open")
-  attachments      String   @default("[]")
-  screeningQuestions String  @default("[]")
+  attachments   Json     @default("[]")
+  screeningQuestions   Json     @default("[]")
   location         String?
   proposalCount    Int      @default(0)
   viewCount        Int      @default(0)
@@ -179,10 +179,10 @@ model Proposal {
   bidAmount      Float
   bidType        String   @default("fixed")
   estimatedDuration String?
-  attachments    String   @default("[]")
-  answers        String   @default("[]")
+  attachments   Json     @default("[]")
+  answers   Json     @default("[]")
   status         String   @default("pending")
-  milestones     String   @default("[]")
+  milestones   Json     @default("[]")
   connectsUsed   Int      @default(0)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
@@ -245,7 +245,7 @@ model Review {
   target       User     @relation("ReviewTarget", fields: [targetId], references: [id], onDelete: Cascade)
   rating       Float
   comment      String?
-  skills       String?
+  skills       Json?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
@@ -279,7 +279,7 @@ model Message {
   type            String   @default("text")
   fileUrl         String?
   fileName        String?
-  offerData       String?
+  offerData       Json?
   isRead          Boolean  @default(false)
   createdAt       DateTime @default(now())
 }
@@ -295,7 +295,7 @@ model Notification {
   message   String
   link      String?
   isRead    Boolean  @default(false)
-  metadata  String?
+  metadata  Json?
   createdAt DateTime @default(now())
 }
 
@@ -326,7 +326,7 @@ model PaymentMethod {
   last4     String?
   brand     String?
   isDefault Boolean  @default(false)
-  metadata  String?
+  metadata  Json?
   createdAt DateTime @default(now())
 }
 
