@@ -118,10 +118,10 @@ describe('ErrorBoundary', () => {
 
     await flushPromises()
 
-    expect(wrapper.vm.hasError).toBe(true)
+    expect((wrapper.vm as any).hasError).toBe(true)
 
-    wrapper.vm.reset()
+    ;(wrapper.vm as any).reset()
 
-    expect(wrapper.vm.hasError).toBe(false)
+    expect((wrapper.vm as any).hasError).toBe(false)
   })
 })
