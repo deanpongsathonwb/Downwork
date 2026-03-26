@@ -15,8 +15,8 @@ export class ProposalsService {
         bidAmount: dto.bidAmount,
         bidType: dto.bidType ?? 'fixed',
         estimatedDuration: dto.estimatedDuration,
-        milestones: JSON.stringify(dto.milestones ?? []),
-        answers: JSON.stringify(dto.answers ?? []),
+        milestones: dto.milestones ?? [],
+        answers: dto.answers ?? [],
       },
     });
 
@@ -63,7 +63,7 @@ export class ProposalsService {
     if (dto.coverLetter) data.coverLetter = dto.coverLetter;
     if (dto.bidAmount) data.bidAmount = dto.bidAmount;
     if (dto.estimatedDuration) data.estimatedDuration = dto.estimatedDuration;
-    if (dto.milestones) data.milestones = JSON.stringify(dto.milestones);
+    if (dto.milestones) data.milestones = dto.milestones;
 
     const updated = await this.prisma.proposal.update({ where: { id }, data });
     return this.formatProposal(updated);
@@ -106,9 +106,9 @@ export class ProposalsService {
     const attachments = proposal.attachments;
     return {
       ...proposal,
-      milestones: typeof milestones === 'string' ? JSON.parse(milestones) : (milestones ?? []),
-      answers: typeof answers === 'string' ? JSON.parse(answers) : (answers ?? []),
-      attachments: typeof attachments === 'string' ? JSON.parse(attachments) : (attachments ?? []),
+      milestones: milestones ?? [],
+      answers: answers ?? [],
+      attachments: attachments ?? [],
     };
   }
 }

@@ -64,7 +64,7 @@ export class JobsService {
         description: dto.description,
         category: dto.category,
         subcategory: dto.subcategory,
-        skills: JSON.stringify(dto.skills ?? []),
+        skills: dto.skills ?? [],
         budgetType: dto.budgetType ?? 'fixed',
         budgetMin: dto.budgetMin,
         budgetMax: dto.budgetMax,
@@ -73,7 +73,7 @@ export class JobsService {
         experienceLevel: dto.experienceLevel ?? 'intermediate',
         scope: dto.scope,
         visibility: dto.visibility ?? 'public',
-        screeningQuestions: JSON.stringify(dto.screeningQuestions ?? []),
+        screeningQuestions: dto.screeningQuestions ?? [],
         location: dto.location,
         featured: dto.featured ?? false,
         urgent: dto.urgent ?? false,
@@ -89,8 +89,8 @@ export class JobsService {
     if (job.clientId !== userId) throw new ForbiddenException();
 
     const data: Record<string, unknown> = { ...dto };
-    if (dto.skills) data.skills = JSON.stringify(dto.skills);
-    if (dto.screeningQuestions) data.screeningQuestions = JSON.stringify(dto.screeningQuestions);
+    if (dto.skills) data.skills = dto.skills;
+    if (dto.screeningQuestions) data.screeningQuestions = dto.screeningQuestions;
 
     const updated = await this.prisma.job.update({ where: { id }, data });
     return this.formatJob(updated);
@@ -200,9 +200,9 @@ export class JobsService {
     const attachments = job.attachments;
     return {
       ...job,
-      skills: typeof skills === 'string' ? JSON.parse(skills) : (skills ?? []),
-      screeningQuestions: typeof screeningQuestions === 'string' ? JSON.parse(screeningQuestions) : (screeningQuestions ?? []),
-      attachments: typeof attachments === 'string' ? JSON.parse(attachments) : (attachments ?? []),
+      skills: skills ?? [],
+      screeningQuestions: screeningQuestions ?? [],
+      attachments: attachments ?? [],
       budget: {
         type: job.budgetType,
         min: job.budgetMin,

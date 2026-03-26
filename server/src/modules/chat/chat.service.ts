@@ -91,7 +91,7 @@ export class ChatService {
         senderId,
         content: 'Sent an offer',
         type: 'offer',
-        offerData: JSON.stringify(offer),
+        offerData: offer,
       },
     });
   }

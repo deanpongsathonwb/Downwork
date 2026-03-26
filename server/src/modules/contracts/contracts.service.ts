@@ -192,7 +192,7 @@ export class ContractsService {
         targetId,
         rating: dto.rating,
         comment: dto.comment,
-        skills: dto.skills ? JSON.stringify(dto.skills) : null,
+        skills: dto.skills ?? null,
       },
     });
   }
