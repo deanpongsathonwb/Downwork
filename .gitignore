@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+
+# Build output
+client/dist/
+server/dist/
+
+# Environment
+.env
+.env.local
+.env.development.local
+.env.production.local
+*.local
+
+# Database
+server/prisma/dev.db
+server/prisma/dev.db-journal
+
+# Uploads
+server/uploads/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+npm-debug.log*
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Misc
+.cursor/

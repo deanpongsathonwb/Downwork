@@ -1,0 +1,87 @@
+import type { AppNotification } from '@/types'
+
+// ============================================================
+// MOCK NOTIFICATION DATA
+// ============================================================
+
+export const MOCK_NOTIFICATIONS: AppNotification[] = [
+  {
+    id: 'notif-001',
+    userId: 'user-freelancer-01',
+    type: 'proposal',
+    title: 'Proposal Accepted',
+    message: 'Sarah Johnson accepted your proposal for "Senior Vue.js Developer for SaaS Dashboard".',
+    link: '/freelancer/contracts/contract-001',
+    isRead: false,
+    createdAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 'notif-002',
+    userId: 'user-freelancer-01',
+    type: 'contract',
+    title: 'Milestone Payment Released',
+    message: 'You received $500.00 for completing "Project Setup & Architecture" milestone.',
+    link: '/freelancer/contracts/contract-001',
+    isRead: false,
+    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 'notif-003',
+    userId: 'user-freelancer-01',
+    type: 'message',
+    title: 'New Message from Sarah Johnson',
+    message: 'Can you share the progress on the dashboard components?',
+    link: '/freelancer/messages',
+    isRead: false,
+    createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 'notif-004',
+    userId: 'user-freelancer-01',
+    type: 'info',
+    title: 'Profile View',
+    message: 'Your profile was viewed by 3 clients in the last 24 hours.',
+    isRead: true,
+    createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 'notif-005',
+    userId: 'user-freelancer-01',
+    type: 'warning',
+    title: 'Proposal Deadline Approaching',
+    message: 'Your proposal for "Data Scientist — Predictive Analytics Model" expires in 2 days.',
+    link: '/freelancer/proposals',
+    isRead: true,
+    createdAt: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 'notif-006',
+    userId: 'user-client-01',
+    type: 'proposal',
+    title: 'New Proposal Received',
+    message: 'Alex Nguyen submitted a proposal for "Senior Vue.js Developer for SaaS Dashboard".',
+    link: '/client/jobs/job-001/proposals',
+    isRead: false,
+    createdAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 'notif-007',
+    userId: 'user-client-01',
+    type: 'contract',
+    title: 'Milestone Submitted for Review',
+    message: 'Alex Nguyen submitted "Core Dashboard Components" milestone for your approval.',
+    link: '/client/contracts/contract-001',
+    isRead: false,
+    createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 'notif-008',
+    userId: 'user-client-01',
+    type: 'success',
+    title: 'Contract Completed',
+    message: 'Your contract "Django REST API Development" has been completed successfully.',
+    link: '/client/contracts/contract-002',
+    isRead: true,
+    createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+]
