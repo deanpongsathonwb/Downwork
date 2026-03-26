@@ -6,6 +6,12 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('Seeding database...');
 
+  const existingUsers = await prisma.user.count();
+  if (existingUsers > 0) {
+    console.log('Database already seeded, skipping...');
+    return;
+  }
+
   await prisma.platformSettings.upsert({
     where: { id: 'default' },
     update: {},
