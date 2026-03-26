@@ -1,4 +1,5 @@
 import { createApp } from 'vue'
+import * as Sentry from '@sentry/vue'
 import App from './App.vue'
 import router from './router'
 import { installPinia } from './plugins/pinia.plugin'
@@ -17,6 +18,20 @@ import './assets/main.css'
 validateEnv()
 
 const app = createApp(App)
+
+// ── Sentry ────────────────────────────────────────────────────
+if (APP_CONFIG.sentryDsn) {
+  Sentry.init({
+    app,
+    dsn: APP_CONFIG.sentryDsn,
+    integrations: [Sentry.browserTracingIntegration({ router })],
+    tracesSampleRate: APP_CONFIG.isProd ? 0.2 : 1.0,
+    replaysSessionSampleRate: 0,
+    replaysOnErrorSampleRate: APP_CONFIG.isProd ? 1.0 : 0,
+    environment: APP_CONFIG.mode,
+    release: `downwork-client@${APP_CONFIG.version}`,
+  })
+}
 
 // ── Global error handler ─────────────────────────────────────
 app.config.errorHandler = (err, instance, info) => {
