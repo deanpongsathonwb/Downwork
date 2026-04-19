@@ -1,10 +1,16 @@
 <template>
   <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div v-if="loading" class="text-center py-24 text-slate-500">Loading profile…</div>
+    <div v-else-if="loadError" class="text-center py-24 space-y-4">
+      <p class="text-slate-600">{{ loadError }}</p>
+      <AppButton @click="loadProfile">Try again</AppButton>
+    </div>
+    <template v-else-if="profile">
     <!-- Profile Header -->
     <div class="bg-white rounded-2xl border border-slate-200 p-6 mb-6">
       <div class="flex flex-col sm:flex-row gap-6">
         <div class="relative shrink-0">
-          <UserAvatar :name="`${profile.firstName} ${profile.lastName}`" size="xl" />
+          <UserAvatar :name="`${profile.firstName} ${profile.lastName}`" :src="profile.avatar" size="xl" />
           <span v-if="profile.availability === 'available'" class="absolute bottom-1 right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white" />
         </div>
         <div class="flex-1">
@@ -224,17 +230,21 @@
         <!-- Member Since -->
         <div class="bg-white rounded-2xl border border-slate-200 p-5">
           <h3 class="font-semibold text-slate-900 mb-3">Member Since</h3>
-          <p class="text-sm text-slate-600">January 2021</p>
+          <p class="text-sm text-slate-600">{{ memberSinceLabel }}</p>
         </div>
       </div>
     </div>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import type { User, FreelancerProfile } from '@/types'
+import { userService } from '@/services/api/user.service'
+import { normalizeFreelancerApiToProfile } from '@/utils/freelancer-api.normalize'
+import { logger } from '@/utils/logger'
 import AppBadge from '@/components/ui/AppBadge.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppProgressBar from '@/components/ui/AppProgressBar.vue'
@@ -244,64 +254,52 @@ import UserAvatar from '@/components/common/UserAvatar.vue'
 const router = useRouter()
 const route = useRoute()
 const isSaved = ref(false)
+const profile = ref<(User & FreelancerProfile) | null>(null)
+const loading = ref(true)
+const loadError = ref<string | null>(null)
 
-// In production this would be: await userService.getFreelancerProfile(route.params.id)
-// For now the mock data represents the profile for any :id
-onMounted(() => {
-  const _id = route.params.id as string | undefined
-  // TODO: fetch profile by _id from userService when backend is ready
-  void _id
+const memberSinceLabel = computed(() => {
+  const p = profile.value
+  if (!p?.createdAt) return '—'
+  try {
+    return new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric' }).format(new Date(p.createdAt))
+  } catch {
+    return '—'
+  }
 })
 
-const profile = reactive<User & FreelancerProfile>({
-  id: '1', userId: '1', email: 'alex@demo.com', role: 'freelancer', firstName: 'Alex', lastName: 'Johnson',
-  avatar: undefined, isEmailVerified: true, is2FAEnabled: false, createdAt: '', updatedAt: '',
-  title: 'Senior Vue.js & React Developer',
-  bio: 'Full-stack developer with 7+ years of experience building scalable, high-performance web applications. I specialize in Vue.js, React, TypeScript, and Node.js. I pride myself on clean code, great communication, and delivering results on time and within budget.',
-  hourlyRate: 85,
-  skills: [
-    { id: '1', name: 'Vue.js', category: 'frontend' },
-    { id: '2', name: 'React', category: 'frontend' },
-    { id: '3', name: 'TypeScript', category: 'frontend' },
-    { id: '4', name: 'Node.js', category: 'backend' },
-    { id: '5', name: 'PostgreSQL', category: 'database' },
-    { id: '6', name: 'Docker', category: 'devops' },
-    { id: '7', name: 'GraphQL', category: 'backend' },
-    { id: '8', name: 'Tailwind CSS', category: 'frontend' },
-  ],
-  portfolio: [
-    { id: '1', title: 'E-Commerce Platform', description: 'Full-stack marketplace with Vue.js & Node.js — 50k+ daily users', imageUrl: undefined, technologies: ['Vue.js', 'Node.js', 'PostgreSQL'], createdAt: '' },
-    { id: '2', title: 'SaaS Analytics Dashboard', description: 'Real-time data visualization with D3.js and WebSockets', imageUrl: undefined, technologies: ['React', 'D3.js', 'TypeScript'], createdAt: '' },
-    { id: '3', title: 'Fintech Mobile App', description: 'Cross-platform React Native app for personal finance management', imageUrl: undefined, technologies: ['React Native', 'Firebase'], createdAt: '' },
-    { id: '4', title: 'CMS & Blog Platform', description: 'Custom headless CMS with Nuxt.js and Strapi backend', imageUrl: undefined, technologies: ['Nuxt.js', 'Strapi', 'PostgreSQL'], createdAt: '' },
-  ],
-  certifications: [
-    { id: '1', name: 'AWS Solutions Architect', issuer: 'Amazon Web Services', issueDate: '2023-06-01', expiryDate: '2026-06-01' },
-    { id: '2', name: 'Vue.js Certified Developer', issuer: 'Vue School', issueDate: '2022-01-01' },
-  ],
-  workHistory: [
-    { id: '1', jobTitle: 'E-commerce Frontend Development', clientName: 'TechCorp Inc.', feedback: 'Alex is an exceptional developer — fast, clean code, and excellent communication throughout the project. Would hire again without hesitation.', rating: 5, earnings: 8500, startDate: '2024-01', endDate: '2024-03' },
-    { id: '2', jobTitle: 'Vue.js Admin Dashboard', clientName: 'StartupXYZ', feedback: 'Delivered beyond expectations. Very professional and the code quality was outstanding.', rating: 5, earnings: 4200, startDate: '2023-10', endDate: '2023-12' },
-    { id: '3', jobTitle: 'Node.js API Development', clientName: 'Digital Agency Co.', feedback: 'Great work! Very responsive and the API was well-documented and tested.', rating: 4, earnings: 2800, startDate: '2023-06', endDate: '2023-08' },
-  ],
-  employmentHistory: [
-    { id: 'e1', company: 'TechVenture Inc.', title: 'Senior Frontend Developer', startDate: '2020-03', endDate: '2022-09', isCurrent: false, description: 'Led frontend development for a B2B SaaS platform with 10k+ users.' },
-    { id: 'e2', company: 'Creative Agency', title: 'Frontend Developer', startDate: '2017-06', endDate: '2020-02', isCurrent: false },
-  ],
-  educationHistory: [
-    { id: 'edu1', school: 'State University of New York', degree: 'Bachelor of Science', fieldOfStudy: 'Computer Science', startYear: 2013, endYear: 2017 },
-  ],
-  languages: [
-    { name: 'English', proficiency: 'native' },
-    { name: 'Spanish', proficiency: 'conversational' },
-  ],
-  totalEarnings: 125000, totalJobsDone: 89, successRate: 98, jobSuccessScore: 98,
-  rating: 4.9, totalReviews: 67, availability: 'available', location: 'New York, USA',
-  verificationStatus: 'verified', badge: 'top_rated', responseTime: '2 hours', responseRate: 98,
-  connectsBalance: 60, profileCompleteness: 92, isIdentityVerified: true,
-})
+async function loadProfile() {
+  const id = route.params.id as string
+  if (!id || id === 'undefined') {
+    loadError.value = 'Invalid freelancer link.'
+    loading.value = false
+    profile.value = null
+    return
+  }
+  loading.value = true
+  loadError.value = null
+  try {
+    const res = await userService.getFreelancerProfile(id)
+    profile.value = normalizeFreelancerApiToProfile(res.data as Record<string, unknown>)
+  } catch (e) {
+    logger.catch(e, 'FreelancerProfilePage.loadProfile')
+    loadError.value = 'Could not load this profile.'
+    profile.value = null
+  } finally {
+    loading.value = false
+  }
+}
 
-function toggleSave() { isSaved.value = !isSaved.value }
-function startChat() { router.push('/client/messages') }
-function hireNow() { router.push('/client/jobs/new') }
+onMounted(loadProfile)
+watch(() => route.params.id, loadProfile)
+
+function toggleSave() {
+  isSaved.value = !isSaved.value
+}
+function startChat() {
+  router.push('/client/messages')
+}
+function hireNow() {
+  router.push('/client/jobs/new')
+}
 </script>

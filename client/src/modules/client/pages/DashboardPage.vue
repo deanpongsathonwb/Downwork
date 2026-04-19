@@ -2,16 +2,22 @@
   <div class="space-y-6">
     <!-- Welcome Banner -->
     <div class="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-6 text-white">
-      <div class="flex flex-col sm:flex-row justify-between gap-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 class="text-2xl font-bold">Welcome back, {{ auth.user?.firstName }}! 🏢</h1>
           <p class="text-blue-100 mt-1">Manage your projects and find top talent for your next big thing.</p>
         </div>
-        <div class="flex gap-2 shrink-0">
-          <RouterLink to="/client/jobs/new" class="px-4 py-2 bg-white text-blue-700 rounded-xl font-semibold text-sm hover:bg-blue-50 transition-colors">
+        <div class="flex flex-wrap gap-2 shrink-0">
+          <RouterLink
+            to="/client/jobs/new"
+            class="inline-flex items-center justify-center px-4 py-2 bg-white text-blue-700 rounded-xl font-semibold text-sm leading-none hover:bg-blue-50 transition-colors"
+          >
             + Post a Job
           </RouterLink>
-          <RouterLink to="/browse-freelancers" class="px-4 py-2 bg-blue-700/40 text-white border border-white/30 rounded-xl font-semibold text-sm hover:bg-blue-700/60 transition-colors">
+          <RouterLink
+            to="/browse-freelancers"
+            class="inline-flex items-center justify-center px-4 py-2 bg-blue-700/40 text-white border border-white/30 rounded-xl font-semibold text-sm leading-none hover:bg-blue-700/60 transition-colors"
+          >
             Find Talent
           </RouterLink>
         </div>
@@ -83,6 +89,7 @@
               <span class="text-blue-600 font-medium">Review →</span>
             </div>
           </div>
+          <p v-if="!openJobs.length" class="text-center text-slate-400 text-sm py-2">No open jobs right now.</p>
           <RouterLink to="/client/jobs/new" class="block text-center py-3 border-2 border-dashed border-slate-200 rounded-xl text-sm text-slate-400 hover:border-blue-400 hover:text-blue-600 transition-colors font-medium">
             + Post New Job
           </RouterLink>
@@ -102,10 +109,10 @@
             class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
             @click="router.push(`/client/contracts/${contract.id}`)"
           >
-            <UserAvatar :name="`${contract.freelancer?.firstName} ${contract.freelancer?.lastName}`" size="sm" />
+            <UserAvatar :name="contractFreelancerName(contract)" size="sm" />
             <div class="flex-1 min-w-0">
               <p class="text-sm font-medium text-slate-900 truncate">{{ contract.title }}</p>
-              <p class="text-xs text-slate-500">{{ contract.freelancer?.firstName }} {{ contract.freelancer?.lastName }}</p>
+              <p class="text-xs text-slate-500">{{ contractFreelancerName(contract) }}</p>
               <AppProgressBar :value="(contract.milestones.filter(m => ['approved', 'released'].includes(m.status)).length / Math.max(contract.milestones.length, 1)) * 100" color="blue" size="xs" class="mt-1" />
             </div>
             <p class="text-sm font-bold text-blue-700 shrink-0">${{ (contract.totalAmount ?? 0).toLocaleString() }}</p>
@@ -126,6 +133,10 @@
             <span class="text-slate-600 truncate mr-2">{{ item.title }}</span>
             <span class="font-semibold text-blue-700 shrink-0">${{ item.amount.toLocaleString() }}</span>
           </div>
+          <p v-if="!escrowItems.length && escrowTotal > 0" class="text-xs text-slate-400 text-center py-1">
+            Breakdown appears when you have active milestone escrow per contract.
+          </p>
+          <p v-else-if="!escrowItems.length" class="text-xs text-slate-400 text-center py-1">Nothing in escrow yet.</p>
         </div>
         <div class="border-t border-slate-100 pt-3 mt-3">
           <RouterLink to="/client/payments" class="text-xs text-blue-600 font-medium hover:text-blue-700 flex items-center gap-1">
@@ -149,7 +160,10 @@
       </div>
       <div class="relative mt-4">
         <div class="absolute top-1/2 left-0 right-0 h-0.5 bg-slate-200 -translate-y-1/2" />
-        <div class="absolute top-1/2 left-0 h-0.5 bg-blue-400 -translate-y-1/2 transition-all" style="width: 60%" />
+        <div
+          class="absolute top-1/2 left-0 h-0.5 bg-blue-400 -translate-y-1/2 transition-all duration-500"
+          :style="{ width: `${pipelineFillPercent}%` }"
+        />
       </div>
     </div>
 
@@ -159,7 +173,7 @@
         <h2 class="font-semibold text-slate-900">Recommended Freelancers</h2>
         <RouterLink to="/browse-freelancers" class="text-xs text-blue-600 font-medium hover:text-blue-700">Browse all →</RouterLink>
       </div>
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div v-if="recommendedFreelancers.length" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <RouterLink
           v-for="freelancer in recommendedFreelancers"
           :key="freelancer.id"
@@ -183,6 +197,7 @@
           </div>
         </RouterLink>
       </div>
+      <p v-else class="text-center text-slate-400 text-sm py-6">No freelancers to show yet. Try browsing the directory.</p>
     </div>
     </template>
   </div>
@@ -196,6 +211,7 @@ import { useJobStore } from '@/stores/job.store'
 import { useContractStore } from '@/stores/contract.store'
 import { usePaymentStore } from '@/stores/payment.store'
 import { useUserStore } from '@/stores/user.store'
+import type { Contract } from '@/types'
 import AppBadge from '@/components/ui/AppBadge.vue'
 import AppProgressBar from '@/components/ui/AppProgressBar.vue'
 import UserAvatar from '@/components/common/UserAvatar.vue'
@@ -207,10 +223,18 @@ const contractStore = useContractStore()
 const paymentStore = usePaymentStore()
 const userStore = useUserStore()
 
+function contractFreelancerName(contract: Contract): string {
+  const f = contract.freelancer
+  if (!f) return 'Freelancer'
+  const name = `${f.firstName ?? ''} ${f.lastName ?? ''}`.trim()
+  return name || 'Freelancer'
+}
+
 const isLoading = ref(true)
 const error = ref<string | null>(null)
 
-async function retry() {
+/** Store actions swallow errors internally, so we aggregate their `error` refs after load. */
+async function loadDashboard(): Promise<void> {
   isLoading.value = true
   error.value = null
   try {
@@ -218,17 +242,23 @@ async function retry() {
       jobStore.fetchMyJobs(),
       contractStore.fetchContracts(),
       paymentStore.fetchBalance(),
-      userStore.fetchFreelancers(),
+      userStore.fetchFreelancers({ limit: 12, page: 1 }),
     ])
-  } catch {
-    error.value = 'Failed to load dashboard data.'
+    const failures = [jobStore.error, contractStore.error, userStore.error].filter(Boolean) as string[]
+    if (failures.length) {
+      error.value = failures[0] ?? 'Failed to load dashboard data.'
+    }
   } finally {
     isLoading.value = false
   }
 }
 
+function retry(): void {
+  void loadDashboard()
+}
+
 onMounted(() => {
-  retry()
+  void loadDashboard()
 })
 
 const openJobs = computed(() => jobStore.jobs.filter((j) => j.status === 'open'))
@@ -264,6 +294,17 @@ const pipeline = computed(() => [
   { label: 'Shortlisted', sub: 'shortlisted', count: 0, bgColor: 'bg-yellow-100', textColor: 'text-yellow-700' },
   { label: 'Hired', sub: `${activeContracts.value.length} in progress`, count: activeContracts.value.length, bgColor: 'bg-green-100', textColor: 'text-green-700' },
 ])
+
+/** Rough visual progress from hiring activity (no fixed fake percentage). */
+const pipelineFillPercent = computed(() => {
+  const hired = activeContracts.value.length
+  const proposals = totalProposals.value
+  const open = openJobs.value.length
+  if (hired > 0) return Math.min(100, 40 + hired * 15 + Math.min(45, proposals * 3))
+  if (proposals > 0) return Math.min(70, 25 + Math.min(45, proposals * 4))
+  if (open > 0) return 30
+  return 0
+})
 
 const recommendedFreelancers = computed(() =>
   userStore.freelancersList.slice(0, 3).map((f) => ({

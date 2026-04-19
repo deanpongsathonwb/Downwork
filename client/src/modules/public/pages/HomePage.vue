@@ -1,30 +1,20 @@
 <template>
   <div>
     <HomeHeroSection :stats="HOME_STATS" :popular-tags="POPULAR_TAGS" />
-    <HomeCategoriesSection :categories="JOB_CATEGORIES" />
-    <HomeFeaturedJobsSection :jobs="featuredJobs" :is-loading="jobStore.isLoading" />
-    <HomeHowItWorksSection :steps="HOW_IT_WORKS_STEPS" />
+    <HomeCategoriesSection :categories="HOME_BROWSE_CATEGORIES" />
+    <HomeHowItWorksSection />
+    <HomeTestimonialsSection />
     <HomeCTASection />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
-import { useJobStore } from '@/stores/job.store'
-import { JOB_CATEGORIES } from '@/constants/categories'
+import { HOME_BROWSE_CATEGORIES } from '@/constants/categories'
 import HomeHeroSection from '../components/HomeHeroSection.vue'
 import HomeCategoriesSection from '../components/HomeCategoriesSection.vue'
-import HomeFeaturedJobsSection from '../components/HomeFeaturedJobsSection.vue'
 import HomeHowItWorksSection from '../components/HomeHowItWorksSection.vue'
+import HomeTestimonialsSection from '../components/HomeTestimonialsSection.vue'
 import HomeCTASection from '../components/HomeCTASection.vue'
-
-const jobStore = useJobStore()
-
-const featuredJobs = computed(() => jobStore.jobs.slice(0, 6))
-
-onMounted(() => {
-  jobStore.fetchJobs()
-})
 
 const HOME_STATS = [
   { value: '2M+',   label: 'Registered Users'     },
@@ -33,27 +23,14 @@ const HOME_STATS = [
   { value: '180+',  label: 'Countries'             },
 ] as const
 
+/** Labels shown in Hero; `slug` is a `/hire/:slug` landing (see hire-talent.landing). */
 const POPULAR_TAGS = [
-  'Vue.js Developer',
-  'UI Designer',
-  'React',
-  'Python',
-  'Mobile App',
-  'Logo Design',
+  { label: 'Vue.js Developer', slug: 'web-developers' },
+  { label: 'UI Designer', slug: 'ux-designers' },
+  { label: 'React', slug: 'web-developers' },
+  { label: 'Python', slug: 'python-developers' },
+  { label: 'Mobile App', slug: 'mobile-app-developers' },
+  { label: 'Logo Design', slug: 'logo-designers' },
 ] as const
 
-const HOW_IT_WORKS_STEPS = [
-  {
-    title: 'Post Your Job',
-    description: 'Describe what you need, set your budget, and publish your job in minutes.',
-  },
-  {
-    title: 'Review Proposals',
-    description: 'Receive proposals from qualified freelancers and compare their experience.',
-  },
-  {
-    title: 'Hire & Pay Safely',
-    description: 'Work with your chosen freelancer with secure escrow-backed payments.',
-  },
-] as const
 </script>

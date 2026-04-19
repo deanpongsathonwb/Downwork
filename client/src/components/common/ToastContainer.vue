@@ -1,5 +1,5 @@
 <template>
-  <Teleport to="body">
+  <Teleport v-if="TOAST_CONFIG.enabled" to="body">
     <div class="fixed top-4 right-4 z-[9999] flex flex-col gap-3 max-w-sm w-full pointer-events-none">
       <TransitionGroup name="toast">
         <div
@@ -40,6 +40,7 @@
 </template>
 
 <script setup lang="ts">
+import { TOAST_CONFIG } from '@/config/app.config'
 import { useToastStore } from '@/stores/toast.store'
 
 const toastStore = useToastStore()

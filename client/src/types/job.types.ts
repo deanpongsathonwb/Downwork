@@ -16,7 +16,15 @@ export interface ScreeningQuestion {
 
 // ── Job ──────────────────────────────────────────────────────
 
-export type JobStatus = 'draft' | 'open' | 'in_progress' | 'completed' | 'cancelled' | 'paused' | 'closed'
+export type JobStatus =
+  | 'draft'
+  | 'pending_verification'
+  | 'open'
+  | 'in_progress'
+  | 'completed'
+  | 'cancelled'
+  | 'paused'
+  | 'closed'
 export type JobType = 'fixed' | 'hourly'
 export type ExperienceLevel = 'entry' | 'intermediate' | 'expert'
 
@@ -91,7 +99,9 @@ export interface CreateJobPayload {
   skills: string[]
   experienceLevel: ExperienceLevel
   projectLength?: string
-  visibility?: 'public' | 'invite_only'
+  visibility?: 'public' | 'invite_only' | 'private'
+  /** Maps to API `location` (e.g. "Remote") */
+  location?: string
   screeningQuestions?: ScreeningQuestion[]
   attachments?: File[]
 }

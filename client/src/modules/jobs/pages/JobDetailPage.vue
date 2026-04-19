@@ -163,7 +163,7 @@
           <p class="text-lg font-semibold text-slate-900 mb-2">Ready to apply for this job?</p>
           <p class="text-sm text-slate-600 mb-5">Create a free account or sign in to submit your proposal.</p>
           <div class="flex gap-3 justify-center">
-            <RouterLink to="/auth/register" class="px-5 py-2.5 bg-green-600 text-white rounded-xl font-medium text-sm hover:bg-green-700 transition-colors">
+            <RouterLink to="/auth/signup" class="px-5 py-2.5 bg-green-600 text-white rounded-xl font-medium text-sm hover:bg-green-700 transition-colors">
               Create Account
             </RouterLink>
             <RouterLink to="/auth/login" class="px-5 py-2.5 border border-slate-300 text-slate-700 rounded-xl font-medium text-sm hover:bg-white transition-colors">
@@ -325,7 +325,7 @@
     <div v-else class="text-center py-20">
       <p class="text-5xl mb-4" aria-hidden="true">😕</p>
       <h2 class="text-xl font-bold text-slate-900 mb-2">Job not found</h2>
-      <RouterLink to="/browse-jobs" class="text-green-600 font-medium hover:text-green-700">
+      <RouterLink to="/hire" class="text-green-600 font-medium hover:text-green-700">
         Browse all jobs →
       </RouterLink>
     </div>

@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateJobDto, UpdateJobDto, JobFilterDto } from './dto/job.dto';
 
@@ -8,55 +9,90 @@ export class JobsService {
 
   async getJobs(filters: JobFilterDto) {
     const page = filters.page ?? 1;
-    const limit = filters.limit ?? 12;
-    const where: Record<string, unknown> = { status: 'open' };
+    const limit = Math.min(filters.limit ?? 12, 50);
+    const where: Prisma.JobWhereInput = { status: 'open' };
 
     if (filters.category) where.category = filters.category;
-    if (filters.experienceLevel) where.experienceLevel = filters.experienceLevel;
-    if (filters.budgetType) where.budgetType = filters.budgetType;
-
-    const jobs = await this.prisma.job.findMany({
-      where,
-      include: {
-        client: { select: { id: true, firstName: true, lastName: true, avatar: true, clientProfile: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-      skip: (page - 1) * limit,
-      take: limit,
-    });
-
-    let result = jobs.map((j) => this.formatJob(j)) as any[];
+    if (filters.experienceLevel) where.experienceLevel = filters.experienceLevel as any;
+    if (filters.budgetType) where.budgetType = filters.budgetType as any;
+    if (filters.duration) where.duration = filters.duration;
 
     if (filters.search) {
-      const q = filters.search.toLowerCase();
-      result = result.filter(
-        (j: any) => j.title?.toLowerCase().includes(q) || j.description?.toLowerCase().includes(q),
-      );
+      where.OR = [
+        { title: { contains: filters.search, mode: 'insensitive' } },
+        { description: { contains: filters.search, mode: 'insensitive' } },
+      ];
     }
 
-    if (filters.budgetMin !== undefined) {
-      result = result.filter((j: any) => (j.budget?.fixed ?? j.budget?.max ?? 0) >= filters.budgetMin!);
-    }
-    if (filters.budgetMax !== undefined) {
-      result = result.filter((j: any) => (j.budget?.fixed ?? j.budget?.min ?? 999999) <= filters.budgetMax!);
+    if (filters.budgetMin !== undefined || filters.budgetMax !== undefined) {
+      where.AND = [
+        ...(Array.isArray(where.AND) ? where.AND : []),
+        ...(filters.budgetMin !== undefined
+          ? [{ OR: [{ budgetFixed: { gte: filters.budgetMin } }, { budgetMax: { gte: filters.budgetMin } }] }]
+          : []),
+        ...(filters.budgetMax !== undefined
+          ? [{ OR: [{ budgetFixed: { lte: filters.budgetMax } }, { budgetMin: { lte: filters.budgetMax } }] }]
+          : []),
+      ];
     }
 
-    return result;
+    let orderBy: Prisma.JobOrderByWithRelationInput = { createdAt: 'desc' };
+    if (filters.sortBy === 'budget_high') orderBy = { budgetFixed: 'desc' };
+    if (filters.sortBy === 'budget_low') orderBy = { budgetFixed: 'asc' };
+
+    const [jobs, total] = await Promise.all([
+      this.prisma.job.findMany({
+        where,
+        include: {
+          client: {
+            select: { id: true, firstName: true, lastName: true, avatar: true, clientProfile: true },
+          },
+        },
+        orderBy,
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.job.count({ where }),
+    ]);
+
+    return {
+      data: jobs.map((j) => this.formatJob(j)),
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasMore: page * limit < total,
+      },
+    };
   }
 
   async getJob(id: string) {
     const job = await this.prisma.job.findUnique({
       where: { id },
       include: {
-        client: { select: { id: true, firstName: true, lastName: true, avatar: true, clientProfile: true } },
+        client: {
+          select: { id: true, firstName: true, lastName: true, avatar: true, clientProfile: true },
+        },
       },
     });
     if (!job) throw new NotFoundException('Job not found');
+
+    // Not listed on the public site until the client finishes verification (and job is opened).
+    if (job.status === 'draft' || job.status === 'pending_verification') {
+      throw new NotFoundException('Job not found');
+    }
+
     await this.prisma.job.update({ where: { id }, data: { viewCount: { increment: 1 } } });
+
     return this.formatJob(job);
   }
 
   async createJob(clientId: string, dto: CreateJobDto) {
+    const visibility = (dto.visibility as string) ?? 'public';
+    /** Private visibility = save as draft; otherwise wait for email/phone verification before going live. */
+    const status = visibility === 'private' ? 'draft' : 'pending_verification';
+
     const job = await this.prisma.job.create({
       data: {
         clientId,
@@ -65,19 +101,19 @@ export class JobsService {
         category: dto.category,
         subcategory: dto.subcategory,
         skills: dto.skills ?? [],
-        budgetType: dto.budgetType ?? 'fixed',
+        budgetType: (dto.budgetType as any) ?? 'fixed',
         budgetMin: dto.budgetMin,
         budgetMax: dto.budgetMax,
         budgetFixed: dto.budgetFixed,
         duration: dto.duration,
-        experienceLevel: dto.experienceLevel ?? 'intermediate',
+        experienceLevel: (dto.experienceLevel as any) ?? 'intermediate',
         scope: dto.scope,
-        visibility: dto.visibility ?? 'public',
+        visibility: (dto.visibility as any) ?? 'public',
         screeningQuestions: (dto.screeningQuestions ?? []) as any,
         location: dto.location,
         featured: dto.featured ?? false,
         urgent: dto.urgent ?? false,
-        status: 'open',
+        status,
       },
     });
     return this.formatJob(job);
@@ -144,8 +180,8 @@ export class JobsService {
   }
 
   async getMyJobs(userId: string, status?: string) {
-    const where: Record<string, unknown> = { clientId: userId };
-    if (status) where.status = status;
+    const where: Prisma.JobWhereInput = { clientId: userId };
+    if (status) where.status = status as any;
 
     const jobs = await this.prisma.job.findMany({
       where,
@@ -190,7 +226,7 @@ export class JobsService {
     if (!job) throw new NotFoundException('Job not found');
     if (job.clientId !== userId) throw new ForbiddenException();
 
-    const updated = await this.prisma.job.update({ where: { id }, data: { status } });
+    const updated = await this.prisma.job.update({ where: { id }, data: { status: status as any } });
     return this.formatJob(updated);
   }
 

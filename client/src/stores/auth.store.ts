@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import axios from 'axios'
 import type { User, AuthTokens, UserRole } from '@/types'
 import { authService } from '@/services/api/auth.service'
 import { tokenStorage } from '@/services/http/axios.instance'
@@ -57,39 +58,49 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function login(email: string, password: string): Promise<void> {
+  async function login(email: string, password: string): Promise<boolean> {
     isLoading.value = true
     error.value = null
     try {
       const res = await authService.login({ email, password })
       _setSession(res.data.user, res.data.tokens)
       toast.success('Welcome back!', `Hello, ${res.data.user.firstName}`)
-      await _redirectAfterAuth()
+      await redirectAfterAuth()
+      return true
     } catch (err: unknown) {
-      error.value = _extractError(err)
-      toast.error('Login Failed', error.value)
+      error.value = _loginFailureUiMessage(err)
+      return false
     } finally {
       isLoading.value = false
     }
   }
 
+  /** `email_in_use` → caller shows inline field error (no toast). */
   async function register(payload: {
     email: string
     password: string
     firstName: string
     lastName: string
     role: 'freelancer' | 'client'
-  }): Promise<void> {
+  }): Promise<'success' | 'email_in_use' | 'error'> {
     isLoading.value = true
     error.value = null
     try {
       const res = await authService.register(payload)
       _setSession(res.data.user, res.data.tokens)
-      toast.success('Account Created!', 'Welcome to Downwork.')
-      await _redirectAfterAuth()
+      if (res.data.user.role === 'freelancer') {
+        await router.push({ name: 'please-verify' })
+      } else {
+        await router.push({ name: 'registration-success' })
+      }
+      return 'success'
     } catch (err: unknown) {
+      if (axios.isAxiosError(err) && err.response?.status === 409) {
+        return 'email_in_use'
+      }
       error.value = _extractError(err)
       toast.error('Registration Failed', error.value)
+      return 'error'
     } finally {
       isLoading.value = false
     }
@@ -230,7 +241,7 @@ export const useAuthStore = defineStore('auth', () => {
     tokenStorage.clearTokens()
   }
 
-  async function _redirectAfterAuth(): Promise<void> {
+  async function redirectAfterAuth(): Promise<void> {
     const redirect = router.currentRoute.value.query.redirect as string | undefined
     if (redirect && redirect.startsWith('/')) {
       await router.push(redirect)
@@ -246,8 +257,50 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   function _extractError(err: unknown): string {
+    if (axios.isAxiosError(err)) {
+      const data = err.response?.data as { message?: unknown } | undefined
+      const msg = data?.message
+      if (typeof msg === 'string' && msg.trim()) return msg
+      if (Array.isArray(msg) && msg.length) return String(msg[0])
+    }
     if (err instanceof Error) return err.message
     return 'An unexpected error occurred.'
+  }
+
+  const LOGIN_CREDENTIALS_MSG = 'Username or password is incorrect.'
+
+  /** One line under the password field; never leak validation rules (e.g. min length). */
+  function _loginFailureUiMessage(err: unknown): string {
+    if (!axios.isAxiosError(err)) {
+      if (err instanceof Error && err.message.trim()) return err.message
+      return LOGIN_CREDENTIALS_MSG
+    }
+
+    const status = err.response?.status
+    const data = err.response?.data as { message?: unknown } | undefined
+    const rawMsg = data?.message
+
+    if (status === 400) {
+      if (Array.isArray(rawMsg)) return LOGIN_CREDENTIALS_MSG
+      if (rawMsg === 'Validation failed') return LOGIN_CREDENTIALS_MSG
+    }
+
+    const message = _extractError(err)
+    const m = message.toLowerCase()
+    if (m.includes('banned')) return message
+    if (m.includes('deactivated')) return message
+    if (m.includes('two-factor') || m.includes('2fa')) return message
+    if (m.includes('invalid') && m.includes('code')) return message
+    if (status === 401 || status === 403) {
+      return LOGIN_CREDENTIALS_MSG
+    }
+    if (status === 400) {
+      return LOGIN_CREDENTIALS_MSG
+    }
+    if (!status || status >= 500) {
+      return 'Something went wrong. Please try again.'
+    }
+    return message.trim() || LOGIN_CREDENTIALS_MSG
   }
 
   return {
@@ -278,5 +331,6 @@ export const useAuthStore = defineStore('auth', () => {
     verify2FA,
     disable2FA,
     refreshSession,
+    redirectAfterAuth,
   }
 })

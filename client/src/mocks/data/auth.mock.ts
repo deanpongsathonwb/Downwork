@@ -7,6 +7,7 @@ import type { User, AuthTokens } from '@/types'
 export const MOCK_FREELANCER_USER: User = {
   id: 'user-freelancer-01',
   email: 'freelancer@demo.com',
+  username: 'alexn',
   role: 'freelancer',
   firstName: 'Alex',
   lastName: 'Nguyen',
@@ -20,6 +21,7 @@ export const MOCK_FREELANCER_USER: User = {
 export const MOCK_CLIENT_USER: User = {
   id: 'user-client-01',
   email: 'client@demo.com',
+  username: 'sarahj',
   role: 'client',
   firstName: 'Sarah',
   lastName: 'Johnson',
@@ -54,4 +56,14 @@ export function getMockUserByEmail(email: string): User {
   if (email.includes('admin')) return MOCK_ADMIN_USER
   if (email.includes('client')) return MOCK_CLIENT_USER
   return MOCK_FREELANCER_USER
+}
+
+/** Email or username (case-insensitive) for mock login */
+export function getMockUserForLogin(identifier: string): User {
+  const raw = identifier.trim().toLowerCase()
+  if (raw.includes('@')) return getMockUserByEmail(raw)
+  if (raw === 'admin') return MOCK_ADMIN_USER
+  if (raw === 'sarahj' || raw === 'client') return MOCK_CLIENT_USER
+  if (raw === 'alexn' || raw === 'freelancer') return MOCK_FREELANCER_USER
+  return getMockUserByEmail(raw)
 }

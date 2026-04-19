@@ -2,7 +2,7 @@
   <div class="space-y-6">
     <!-- Welcome Banner -->
     <div class="bg-gradient-to-r from-green-600 to-emerald-600 rounded-2xl p-6 text-white">
-      <div class="flex flex-col sm:flex-row justify-between gap-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div class="flex items-center gap-3 mb-2">
             <h1 class="text-2xl font-bold">Welcome back, {{ auth.user?.firstName }}! 👋</h1>
@@ -28,44 +28,66 @@
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <!-- Profile Completeness -->
       <div class="bg-white rounded-2xl border border-slate-200 p-5">
-        <div class="flex justify-between items-center mb-3">
-          <h2 class="font-semibold text-slate-900">Profile Completeness</h2>
-          <span :class="['text-sm font-bold', profileCompleteness >= 80 ? 'text-green-600' : 'text-yellow-600']">{{ profileCompleteness }}%</span>
+        <div v-if="isLoadingProfile" class="space-y-3 animate-pulse">
+          <div class="h-4 bg-slate-100 rounded w-1/2" />
+          <div class="h-3 bg-slate-100 rounded" />
+          <div class="h-3 bg-slate-100 rounded w-3/4" />
         </div>
-        <AppProgressBar :value="profileCompleteness" color="auto" size="md" />
-        <div v-if="profileCompleteness < 100" class="mt-3 space-y-1.5">
-          <p class="text-xs font-medium text-slate-600">Complete your profile to attract more clients:</p>
-          <RouterLink v-for="item in incompleteItems" :key="item.label" :to="item.route" class="flex items-center gap-2 text-xs text-blue-600 hover:text-blue-700 font-medium">
-            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            {{ item.label }}
-          </RouterLink>
-        </div>
-        <p v-else class="text-xs text-green-600 font-medium mt-2">🎉 Your profile is complete!</p>
+        <template v-else>
+          <div class="flex justify-between items-center mb-3">
+            <h2 class="font-semibold text-slate-900">Profile Completeness</h2>
+            <span :class="['text-sm font-bold', profileCompleteness >= 80 ? 'text-green-600' : 'text-yellow-600']">{{ profileCompleteness }}%</span>
+          </div>
+          <AppProgressBar :value="profileCompleteness" color="auto" size="md" />
+          <div v-if="profileCompleteness < 100 && incompleteItems.length" class="mt-3 space-y-1.5">
+            <p class="text-xs font-medium text-slate-600">Complete your profile to attract more clients:</p>
+            <RouterLink v-for="item in incompleteItems" :key="item.labelWithKey" :to="item.route" class="flex items-center gap-2 text-xs text-blue-600 hover:text-blue-700 font-medium">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              {{ item.label }}
+            </RouterLink>
+          </div>
+          <p v-else-if="profileCompleteness >= 100" class="text-xs text-green-600 font-medium mt-2">🎉 Your profile is complete!</p>
+        </template>
       </div>
 
-      <!-- Connects Balance -->
+      <!-- Connects -->
       <div class="bg-white rounded-2xl border border-slate-200 p-5">
-        <div class="flex justify-between items-center mb-2">
-          <h2 class="font-semibold text-slate-900">Connects Balance</h2>
-          <RouterLink to="/freelancer/earnings" class="text-xs text-amber-600 font-medium hover:text-amber-700">Buy more →</RouterLink>
+        <div v-if="isLoadingProfile" class="space-y-3 animate-pulse">
+          <div class="h-4 bg-slate-100 rounded w-1/2" />
+          <div class="h-10 bg-slate-100 rounded w-1/3" />
         </div>
-        <div class="flex items-end gap-2 mb-3">
-          <span class="text-4xl font-black text-amber-600">{{ connectsBalance }}</span>
-          <span class="text-sm text-slate-500 mb-1">Connects</span>
-        </div>
-        <div class="space-y-1.5 text-xs text-slate-500">
-          <div class="flex justify-between">
-            <span>Used this month</span>
-            <span class="font-medium text-slate-700">18 Connects</span>
+        <template v-else>
+          <h2 class="font-semibold text-slate-900 mb-3">Connects</h2>
+          <div class="flex items-end gap-2">
+            <span class="text-4xl font-black text-amber-600">{{ connectsDetail.balance }}</span>
+            <span class="text-sm text-slate-500 mb-1">available</span>
           </div>
-          <div class="flex justify-between">
-            <span>Next free allocation</span>
-            <span class="font-medium text-slate-700">Mar 1 (+10)</span>
+          <dl class="mt-4 space-y-2 text-xs text-slate-600">
+            <div class="flex justify-between gap-2">
+              <dt>Applications this month</dt>
+              <dd class="font-semibold text-slate-800 tabular-nums">{{ connectsDetail.applicationsThisMonth }}</dd>
+            </div>
+            <div v-if="connectsDetail.usedThisMonth > 0" class="flex justify-between gap-2">
+              <dt>Connects used (this month)</dt>
+              <dd class="font-semibold text-slate-800 tabular-nums">{{ connectsDetail.usedThisMonth }}</dd>
+            </div>
+          </dl>
+          <div v-if="connectsDetail.recentPurchases.length" class="mt-4 pt-4 border-t border-slate-100">
+            <p class="text-xs font-medium text-slate-500 mb-2">Recent purchases</p>
+            <ul class="space-y-1.5 text-xs text-slate-700">
+              <li v-for="row in connectsDetail.recentPurchases.slice(0, 3)" :key="row.id" class="flex justify-between gap-2">
+                <span class="truncate" :title="row.description">{{ row.description }}</span>
+                <time class="text-slate-400 shrink-0 tabular-nums" :datetime="row.createdAt">{{ formatShortDate(row.createdAt) }}</time>
+              </li>
+            </ul>
           </div>
-        </div>
-        <RouterLink to="/freelancer/earnings">
-          <AppButton variant="outline" size="sm" class="w-full mt-3 border-amber-200 text-amber-700 hover:bg-amber-50">Buy Connects</AppButton>
-        </RouterLink>
+          <p v-else class="mt-4 text-xs text-slate-500">Buy Connects on the earnings page when you need more to apply.</p>
+          <RouterLink to="/freelancer/earnings" class="block mt-4">
+            <AppButton variant="outline" size="sm" class="w-full border-amber-200 text-amber-700 hover:bg-amber-50">
+              Buy Connects
+            </AppButton>
+          </RouterLink>
+        </template>
       </div>
     </div>
 
@@ -79,7 +101,7 @@
           </div>
         </div>
         <p class="text-2xl font-bold text-slate-900">{{ stat.value }}</p>
-        <p :class="['text-xs mt-1 font-medium', stat.changePositive ? 'text-green-600' : 'text-red-500']">
+        <p :class="['text-xs mt-1 font-medium', stat.changePositive ? 'text-slate-500' : 'text-red-500']">
           {{ stat.change }}
         </p>
       </div>
@@ -112,9 +134,9 @@
               <p class="text-xs text-slate-500">{{ contract.client?.firstName }} {{ contract.client?.lastName }}</p>
             </div>
             <div class="text-right shrink-0">
-              <p class="text-sm font-semibold text-green-700">${{ (contract.totalAmount ?? 0).toLocaleString() }}</p>
+              <p class="text-sm font-semibold text-green-700">${{ Number(contract.totalAmount ?? 0).toLocaleString() }}</p>
               <div class="mt-1">
-                <AppProgressBar :value="(contract.totalAmount ?? 0) > 0 ? ((contract.paidAmount ?? 0) / (contract.totalAmount ?? 1)) * 100 : 0" color="blue" size="xs" />
+                <AppProgressBar :value="Number(contract.totalAmount ?? 0) > 0 ? (Number(contract.paidAmount ?? 0) / Number(contract.totalAmount ?? 1)) * 100 : 0" color="blue" size="xs" />
               </div>
             </div>
           </div>
@@ -125,26 +147,31 @@
       <!-- Recommended Jobs -->
       <div class="bg-white rounded-2xl border border-slate-200 p-6">
         <div class="flex justify-between items-center mb-5">
-          <h2 class="font-semibold text-slate-900">Best Matches</h2>
+          <h2 class="font-semibold text-slate-900">Recent Open Jobs</h2>
           <RouterLink to="/browse-jobs" class="text-xs text-green-600 font-medium hover:text-green-700">Browse all →</RouterLink>
         </div>
         <div class="space-y-3">
-          <div
-            v-for="job in recommendedJobs"
-            :key="job.id"
-            class="p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer group"
-            @click="router.push(`/jobs/${job.id}`)"
-          >
-            <div class="flex justify-between items-start mb-1">
-              <p class="text-sm font-medium text-slate-900 group-hover:text-green-600 transition-colors line-clamp-1">{{ job.title }}</p>
-              <span class="text-xs font-bold text-green-700 shrink-0 ml-2">${{ job.budget.min ?? job.budget.amount }}{{ job.budget.type === 'hourly' ? '/hr' : '' }}</span>
-            </div>
-            <div class="flex items-center justify-between">
-              <span class="text-xs text-slate-500">{{ job.category }}</span>
-              <span class="text-xs bg-green-100 text-green-700 font-semibold px-2 py-0.5 rounded-md">{{ job.matchScore ?? Math.floor(Math.random() * 15 + 85) }}% match</span>
-            </div>
+          <div v-if="isLoadingRecommended" class="space-y-3">
+            <div v-for="i in 3" :key="i" class="h-14 bg-slate-100 rounded-xl animate-pulse" />
           </div>
-          <p v-if="!recommendedJobs.length" class="text-sm text-slate-400 text-center py-4">Loading recommendations...</p>
+          <template v-else>
+            <div
+              v-for="job in recommendedJobs"
+              :key="job.id"
+              class="p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer group"
+              @click="router.push(`/jobs/${job.id}`)"
+            >
+              <div class="flex justify-between items-start mb-1">
+                <p class="text-sm font-medium text-slate-900 group-hover:text-green-600 transition-colors line-clamp-1">{{ job.title }}</p>
+                <span class="text-xs font-bold text-green-700 shrink-0 ml-2">{{ formatJobBudget(job) }}</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-xs text-slate-500">{{ job.category }}</span>
+                <span v-if="job.matchScore != null" class="text-xs bg-green-100 text-green-700 font-semibold px-2 py-0.5 rounded-md">{{ job.matchScore }}% match</span>
+              </div>
+            </div>
+            <p v-if="!recommendedJobs.length" class="text-sm text-slate-400 text-center py-4">No open jobs right now.</p>
+          </template>
         </div>
       </div>
     </div>
@@ -156,22 +183,33 @@
         <div class="flex justify-between items-center mb-5">
           <h2 class="font-semibold text-slate-900">Earnings Overview</h2>
           <div class="flex gap-2">
-            <button v-for="period in ['Week', 'Month', 'Year']" :key="period" :class="['px-3 py-1.5 text-xs font-medium rounded-lg transition-colors', activePeriod === period ? 'bg-green-600 text-white' : 'text-slate-500 hover:bg-slate-100']" @click="activePeriod = period">
+            <button v-for="period in periodOptions" :key="period" :class="['px-3 py-1.5 text-xs font-medium rounded-lg transition-colors', activePeriod === period ? 'bg-green-600 text-white' : 'text-slate-500 hover:bg-slate-100']" @click="activePeriod = period">
               {{ period }}
             </button>
           </div>
         </div>
-        <div class="flex items-end gap-1.5 h-32 mb-2">
-          <div v-for="(bar, i) in earningsData" :key="i" class="flex-1 bg-green-100 rounded-t-lg relative group transition-all hover:bg-green-200" :style="{ height: `${bar.pct}%` }">
-            <div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs px-1.5 py-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap transition-opacity z-10">
-              ${{ bar.amount.toLocaleString() }}
+        <div v-if="isLoadingEarnings" class="h-32 mb-2 flex items-center justify-center text-slate-400 text-sm">Loading earnings…</div>
+        <template v-else>
+          <div class="flex items-end h-32 mb-2 min-h-[8rem]" :class="activePeriod === 'Year' ? 'gap-0.5' : 'gap-1.5'">
+            <div
+              v-for="(bar, i) in earningsData"
+              :key="i"
+              class="flex-1 min-w-0 bg-green-100 rounded-t-lg relative group transition-all hover:bg-green-200"
+              :style="{ height: `${Math.max(bar.pct, 2)}%` }"
+            >
+              <div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs px-1.5 py-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap transition-opacity z-10 pointer-events-none">
+                ${{ bar.amount.toLocaleString() }}
+              </div>
             </div>
           </div>
-        </div>
-        <div class="flex justify-between">
-          <span v-for="label in barLabels" :key="label" class="text-xs text-slate-400 flex-1 text-center">{{ label }}</span>
-        </div>
-        <p class="text-center mt-3 text-lg font-bold text-slate-900">Total: <span class="text-green-600">$4,250</span> this month</p>
+          <div class="flex justify-between gap-0.5">
+            <span v-for="label in barLabels" :key="label" class="text-[10px] sm:text-xs text-slate-400 flex-1 min-w-0 text-center truncate">{{ label }}</span>
+          </div>
+          <p class="text-center mt-3 text-lg font-bold text-slate-900">
+            Total: <span class="text-green-600">${{ earningsPeriodTotal.toLocaleString() }}</span>
+            <span class="text-sm font-normal text-slate-500"> · {{ earningsPeriodCaption }}</span>
+          </p>
+        </template>
       </div>
 
       <!-- JSS Score -->
@@ -191,21 +229,17 @@
         </div>
         <div class="space-y-2 text-sm">
           <div class="flex justify-between">
-            <span class="text-slate-500">Total Jobs</span>
-            <span class="font-semibold">89</span>
+            <span class="text-slate-500">Completed jobs</span>
+            <span class="font-semibold">{{ completedJobsDisplay }}</span>
           </div>
           <div class="flex justify-between">
-            <span class="text-slate-500">5-Star Reviews</span>
-            <span class="font-semibold text-yellow-500">⭐ 61</span>
-          </div>
-          <div class="flex justify-between">
-            <span class="text-slate-500">Repeat Clients</span>
-            <span class="font-semibold">34%</span>
+            <span class="text-slate-500">Reviews</span>
+            <span class="font-semibold text-yellow-500">⭐ {{ reviewCountDisplay }} <span v-if="avgRatingDisplay !== null" class="text-slate-700">({{ avgRatingDisplay.toFixed(1) }})</span></span>
           </div>
         </div>
-        <div class="mt-4 p-3 bg-green-50 rounded-xl border border-green-200">
-          <p class="text-xs font-semibold text-green-800">🏅 Top Rated Status</p>
-          <p class="text-xs text-green-600 mt-0.5">Earned for maintaining 90%+ JSS for 13 weeks</p>
+        <div v-if="jss >= 90" class="mt-4 p-3 bg-green-50 rounded-xl border border-green-200">
+          <p class="text-xs font-semibold text-green-800">🏅 Strong success rate</p>
+          <p class="text-xs text-green-600 mt-0.5">Keep delivering great work to maintain your score.</p>
         </div>
       </div>
     </div>
@@ -218,58 +252,322 @@ import { RouterLink, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.store'
 import { useJobStore } from '@/stores/job.store'
 import { contractService } from '@/services/api/contract.service'
-import type { Contract } from '@/types'
+import { userService } from '@/services/api/user.service'
+import { proposalService } from '@/services/api/proposal.service'
+import { paymentService } from '@/services/api/payment.service'
+import type { Contract, Job, Proposal, ConnectsBalanceResponse } from '@/types'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppProgressBar from '@/components/ui/AppProgressBar.vue'
 
+/** API merges freelancer fields onto the user object */
+type MergedFreelancer = Record<string, unknown> & {
+  profileCompleteness?: number
+  connectsBalance?: number
+  completedJobs?: number
+  reviewCount?: number
+  totalEarnings?: unknown
+  successRate?: unknown
+  rating?: unknown
+  title?: string
+  bio?: string
+  portfolioItems?: unknown
+  education?: unknown
+  freelancerProfile?: Record<string, unknown>
+}
+
+type PaymentTx = {
+  net?: unknown
+  amount?: unknown
+  createdAt: string
+  type: string
+  status: string
+}
+
 const auth = useAuthStore()
 const jobStore = useJobStore()
 const router = useRouter()
-const activePeriod = ref('Month')
+const periodOptions = ['Week', 'Month', 'Year'] as const
+type EarningsPeriod = (typeof periodOptions)[number]
+const activePeriod = ref<EarningsPeriod>('Month')
 
-const profileCompleteness = ref(72)
-const connectsBalance = ref(60)
-const jss = ref(98)
-const freelancerBadge = ref<'top_rated' | 'rising_talent' | null>('top_rated')
+const freelancerProfile = ref<MergedFreelancer | null>(null)
+const connectsDetail = ref<ConnectsBalanceResponse>({
+  balance: 0,
+  usedThisMonth: 0,
+  applicationsThisMonth: 0,
+  recentPurchases: [],
+})
 const activeContracts = ref<Contract[]>([])
-const isLoadingContracts = ref(false)
+const myProposals = ref<Proposal[]>([])
+const paymentTransactions = ref<PaymentTx[]>([])
 
-const badgeStyle = computed(() => {
-  if (freelancerBadge.value === 'top_rated') return { bg: 'bg-yellow-100', text: 'text-yellow-800', icon: '⭐', label: 'Top Rated' }
-  if (freelancerBadge.value === 'rising_talent') return { bg: 'bg-purple-100', text: 'text-purple-800', icon: '🚀', label: 'Rising Talent' }
-  return { bg: '', text: '', icon: '', label: '' }
+const isLoadingProfile = ref(true)
+const isLoadingContracts = ref(false)
+const isLoadingRecommended = ref(true)
+const isLoadingEarnings = ref(true)
+
+function toNum(v: unknown): number {
+  if (typeof v === 'number' && !Number.isNaN(v)) return v
+  const n = parseFloat(String(v ?? '0').replace(/,/g, ''))
+  return Number.isFinite(n) ? n : 0
+}
+
+const profileCompleteness = computed(() => {
+  const p = freelancerProfile.value
+  if (!p) return 0
+  const raw =
+    p.profileCompleteness ??
+    (p.freelancerProfile?.profileCompleteness as number | undefined)
+  return Math.min(100, Math.max(0, Math.round(Number(raw) || 0)))
 })
 
-const incompleteItems = [
-  { label: 'Add portfolio items', route: '/freelancer/profile' },
-  { label: 'Add education history', route: '/freelancer/profile' },
-  { label: 'Upload a profile photo', route: '/freelancer/profile' },
-]
+const incompleteItems = computed(() => {
+  const items: { label: string; route: string; labelWithKey: string }[] = []
+  const u = auth.user
+  const p = freelancerProfile.value
+  if (!u || !p) return items
 
-onMounted(async () => {
-  jobStore.fetchRecommended()
-  isLoadingContracts.value = true
-  try {
-    const res = await contractService.getContracts()
-    activeContracts.value = res.data.filter((c) => c.status === 'active')
-  } finally {
-    isLoadingContracts.value = false
+  if (!u.avatar) items.push({ label: 'Upload a profile photo', route: '/freelancer/profile', labelWithKey: 'avatar' })
+
+  const portfolioLen = Array.isArray(p.portfolioItems) ? p.portfolioItems.length : 0
+  const educationLen = Array.isArray(p.education) ? p.education.length : 0
+
+  if (portfolioLen < 1) {
+    items.push({ label: 'Add portfolio items', route: '/freelancer/profile', labelWithKey: 'portfolio' })
   }
+  if (educationLen < 1) {
+    items.push({ label: 'Add education history', route: '/freelancer/profile', labelWithKey: 'education' })
+  }
+  if (!(p.title && String(p.title).trim())) {
+    items.push({ label: 'Add a professional title', route: '/freelancer/profile', labelWithKey: 'title' })
+  }
+  if (!(p.bio && String(p.bio).trim())) {
+    items.push({ label: 'Write your bio', route: '/freelancer/profile', labelWithKey: 'bio' })
+  }
+
+  return items.slice(0, 6)
+})
+
+const freelancerBadge = computed<'top_rated' | null>(() => {
+  const sr = toNum(freelancerProfile.value?.successRate)
+  return sr >= 90 ? 'top_rated' : null
+})
+
+const badgeStyle = computed(() => {
+  if (freelancerBadge.value === 'top_rated') {
+    return { bg: 'bg-yellow-100', text: 'text-yellow-800', icon: '⭐', label: 'Top Rated' }
+  }
+  return { bg: '', text: '', icon: '', label: '' }
 })
 
 const recommendedJobs = computed(() => jobStore.recommendedJobs.slice(0, 4))
 
-const stats = [
-  { label: 'Total Earnings', value: '$12,450', change: '+18% this month', icon: 'dollar-sign', bgColor: 'bg-green-100', iconColor: 'text-green-600', changePositive: true },
-  { label: 'Active Contracts', value: '3', change: '+1 this week', icon: 'briefcase', bgColor: 'bg-blue-100', iconColor: 'text-blue-600', changePositive: true },
-  { label: 'Proposals Sent', value: '7', change: '2 viewed', icon: 'file-text', bgColor: 'bg-purple-100', iconColor: 'text-purple-600', changePositive: true },
-  { label: 'Response Rate', value: '98%', change: '+1% this month', icon: 'trending-up', bgColor: 'bg-orange-100', iconColor: 'text-orange-600', changePositive: true },
-]
+const stats = computed(() => {
+  const p = freelancerProfile.value
+  const te = p ? toNum(p.totalEarnings) : 0
+  const ac = activeContracts.value.length
+  const propCount = myProposals.value.length
+  const shortlisted = myProposals.value.filter((x) => x.status === 'shortlisted').length
+  const sr = p ? toNum(p.successRate) : 0
 
-const earningsData = [
-  { pct: 40, amount: 850 }, { pct: 65, amount: 1380 }, { pct: 30, amount: 640 },
-  { pct: 80, amount: 1700 }, { pct: 55, amount: 1170 }, { pct: 45, amount: 960 }, { pct: 70, amount: 1490 },
-]
-const barLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+  return [
+    {
+      label: 'Total Earnings',
+      value: `$${te.toLocaleString()}`,
+      change: 'Lifetime total (profile)',
+      icon: 'dollar-sign',
+      bgColor: 'bg-green-100',
+      iconColor: 'text-green-600',
+      changePositive: true,
+    },
+    {
+      label: 'Active Contracts',
+      value: String(ac),
+      change: 'In progress',
+      icon: 'briefcase',
+      bgColor: 'bg-blue-100',
+      iconColor: 'text-blue-600',
+      changePositive: true,
+    },
+    {
+      label: 'Proposals',
+      value: String(propCount),
+      change: shortlisted ? `${shortlisted} shortlisted` : 'Submitted & active',
+      icon: 'file-text',
+      bgColor: 'bg-purple-100',
+      iconColor: 'text-purple-600',
+      changePositive: true,
+    },
+    {
+      label: 'Success rate',
+      value: `${Math.round(sr)}%`,
+      change: 'From your profile',
+      icon: 'trending-up',
+      bgColor: 'bg-orange-100',
+      iconColor: 'text-orange-600',
+      changePositive: sr >= 50,
+    },
+  ]
+})
+
+function txNet(t: PaymentTx): number {
+  return toNum(t.net ?? t.amount)
+}
+
+function buildEarningsChart(txs: PaymentTx[], period: string) {
+  const completed = txs.filter((t) => t.type === 'payment' && t.status === 'completed')
+  const now = new Date()
+
+  if (period === 'Week') {
+    const days: Date[] = []
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now)
+      d.setHours(0, 0, 0, 0)
+      d.setDate(d.getDate() - i)
+      days.push(d)
+    }
+    const amounts = days.map((day) => {
+      const start = new Date(day)
+      const end = new Date(day)
+      end.setDate(end.getDate() + 1)
+      return completed
+        .filter((t) => {
+          const dt = new Date(t.createdAt)
+          return dt >= start && dt < end
+        })
+        .reduce((s, t) => s + txNet(t), 0)
+    })
+    const labels = days.map((d) => d.toLocaleDateString(undefined, { weekday: 'short' }))
+    return finalizeChart(amounts, labels, 'this week')
+  }
+
+  if (period === 'Month') {
+    const amounts: number[] = []
+    const labels: string[] = []
+    for (let b = 6; b >= 0; b--) {
+      const end = new Date(now)
+      end.setHours(23, 59, 59, 999)
+      end.setDate(end.getDate() - b * 4)
+      const start = new Date(end)
+      start.setHours(0, 0, 0, 0)
+      start.setDate(start.getDate() - 3)
+      const sum = completed
+        .filter((t) => {
+          const dt = new Date(t.createdAt)
+          return dt >= start && dt <= end
+        })
+        .reduce((s, t) => s + txNet(t), 0)
+      amounts.push(sum)
+      labels.push(`${start.getMonth() + 1}/${start.getDate()}`)
+    }
+    return finalizeChart(amounts, labels, 'last 28 days')
+  }
+
+  const year = now.getFullYear()
+  const amounts: number[] = []
+  const labels: string[] = []
+  for (let m = 0; m < 12; m++) {
+    const start = new Date(year, m, 1)
+    const end = new Date(year, m + 1, 1)
+    const sum = completed
+      .filter((t) => {
+        const dt = new Date(t.createdAt)
+        return dt >= start && dt < end
+      })
+      .reduce((s, t) => s + txNet(t), 0)
+    amounts.push(sum)
+    labels.push(start.toLocaleDateString(undefined, { month: 'short' }))
+  }
+  return finalizeChart(amounts, labels, String(year))
+}
+
+function finalizeChart(amounts: number[], labels: string[], periodLabel: string) {
+  const max = Math.max(...amounts, 1e-6)
+  const bars = amounts.map((amount) => ({ pct: (amount / max) * 100, amount }))
+  const total = amounts.reduce((a, b) => a + b, 0)
+  return { bars, labels, total, periodLabel }
+}
+
+const earningsChart = computed(() => buildEarningsChart(paymentTransactions.value, activePeriod.value))
+
+const earningsData = computed(() => earningsChart.value.bars)
+const barLabels = computed(() => earningsChart.value.labels)
+const earningsPeriodTotal = computed(() => earningsChart.value.total)
+const earningsPeriodCaption = computed(() => earningsChart.value.periodLabel)
+
+const jss = computed(() => {
+  const s = toNum(freelancerProfile.value?.successRate)
+  return Math.min(100, Math.max(0, Math.round(s)))
+})
+
+const completedJobsDisplay = computed(() => String(freelancerProfile.value?.completedJobs ?? 0))
+const reviewCountDisplay = computed(() => String(freelancerProfile.value?.reviewCount ?? 0))
+const avgRatingDisplay = computed(() => {
+  const r = toNum(freelancerProfile.value?.rating)
+  if (r <= 0) return null
+  return r
+})
+
+function formatJobBudget(job: Job): string {
+  const b = job.budget
+  if (!b) return '—'
+  if (b.type === 'hourly') {
+    const lo = b.min ?? b.amount
+    const hi = b.max
+    if (lo != null && hi != null) return `$${lo}–${hi}/hr`
+    return `$${lo ?? 0}/hr`
+  }
+  return `$${b.amount ?? 0}`
+}
+
+function formatShortDate(iso: string): string {
+  try {
+    return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  } catch {
+    return ''
+  }
+}
+
+onMounted(async () => {
+  const userId = auth.user?.id
+  if (!userId) {
+    isLoadingProfile.value = false
+    isLoadingRecommended.value = false
+    isLoadingEarnings.value = false
+    return
+  }
+
+  isLoadingContracts.value = true
+
+  try {
+    const [profileRes, contractsRes, proposalsRes, earningsRes, connectsRes] = await Promise.all([
+      userService.getFreelancerProfile(userId),
+      contractService.getContracts(),
+      proposalService.getMyProposals(),
+      paymentService.getEarnings(),
+      paymentService.getConnectsBalance(),
+      jobStore.fetchRecommended(),
+    ])
+
+    freelancerProfile.value = profileRes.data as unknown as MergedFreelancer
+    activeContracts.value = contractsRes.data.filter((c) => c.status === 'active')
+    myProposals.value = proposalsRes.data
+    paymentTransactions.value = Array.isArray(earningsRes.data) ? (earningsRes.data as unknown as PaymentTx[]) : []
+    const c = connectsRes.data
+    connectsDetail.value = {
+      balance: c?.balance ?? toNum(freelancerProfile.value?.connectsBalance),
+      usedThisMonth: c?.usedThisMonth ?? 0,
+      applicationsThisMonth: c?.applicationsThisMonth ?? 0,
+      recentPurchases: Array.isArray(c?.recentPurchases) ? c.recentPurchases : [],
+    }
+  } catch {
+    freelancerProfile.value = null
+  } finally {
+    isLoadingProfile.value = false
+    isLoadingContracts.value = false
+    isLoadingRecommended.value = false
+    isLoadingEarnings.value = false
+  }
+})
 </script>

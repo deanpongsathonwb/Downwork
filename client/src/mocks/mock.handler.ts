@@ -1,6 +1,6 @@
 import type { AxiosRequestConfig, AxiosResponse } from 'axios'
 import { MOCK_JOBS, MOCK_PROPOSALS } from './data/jobs.mock'
-import { getMockUserByEmail, MOCK_TOKENS, MOCK_FREELANCER_USER } from './data/auth.mock'
+import { getMockUserForLogin, MOCK_TOKENS, MOCK_FREELANCER_USER } from './data/auth.mock'
 import { MOCK_CONTRACTS } from './data/contracts.mock'
 import { MOCK_NOTIFICATIONS } from './data/notifications.mock'
 import { MOCK_CONVERSATIONS, MOCK_MESSAGES } from './data/chat.mock'
@@ -22,6 +22,23 @@ function makeResponse<T>(data: T, message = 'OK', meta?: ApiResponse<T>['meta'])
     statusText: 'OK',
     headers: {},
     config: {} as never,
+  }
+}
+
+/** Jobs created via POST in this browser session (mock). */
+const mockSessionCreatedJobs: Job[] = []
+
+function isJobPubliclyListed(job: Job): boolean {
+  return job.status === 'open'
+}
+
+function make404Response(config: AxiosRequestConfig): AxiosResponse<ApiResponse<null>> {
+  return {
+    data: { success: false, message: 'Not found', data: null },
+    status: 404,
+    statusText: 'Not Found',
+    headers: {},
+    config: config as never,
   }
 }
 
@@ -90,8 +107,19 @@ export async function resolveMockRequest(
 
   if (method === 'post' && url === '/auth/login') {
     const body = parseBody(config)
-    const user = getMockUserByEmail((body.email as string) ?? '')
+    const user = getMockUserForLogin((body.email as string) ?? '')
     return makeResponse({ user, tokens: MOCK_TOKENS }, 'Login successful')
+  }
+
+  if (method === 'get' && url.startsWith('/auth/register/email-available')) {
+    const params = (config.params ?? {}) as { email?: string }
+    const q = url.includes('?') ? url.split('?')[1] : ''
+    const fromQuery = new URLSearchParams(q).get('email') ?? ''
+    const raw = typeof params.email === 'string' ? params.email : fromQuery
+    const email = decodeURIComponent(raw).trim().toLowerCase()
+    const reserved = ['freelancer@demo.com', 'client@demo.com', 'admin@demo.com']
+    const taken = reserved.includes(email) || email.includes('taken')
+    return makeResponse({ available: !taken }, 'OK')
   }
 
   if (method === 'post' && url === '/auth/register') {
@@ -196,7 +224,8 @@ export async function resolveMockRequest(
     const params = (config.params ?? {}) as JobFilters
     const page = Number(params.page ?? 1)
     const limit = Number(params.limit ?? 12)
-    const filtered = applyJobFilters(MOCK_JOBS, params)
+    const publicPool = [...MOCK_JOBS, ...mockSessionCreatedJobs].filter(isJobPubliclyListed)
+    const filtered = applyJobFilters(publicPool, params)
     const total = filtered.length
     const start = (page - 1) * limit
     const paged = filtered.slice(start, start + limit)
@@ -239,23 +268,32 @@ export async function resolveMockRequest(
   // GET /jobs/:id
   const jobDetailMatch = url.match(/^\/jobs\/([^/]+)$/)
   if (method === 'get' && jobDetailMatch) {
-    const job = MOCK_JOBS.find((j) => j.id === jobDetailMatch[1]) ?? MOCK_JOBS[0]
+    const id = jobDetailMatch[1]
+    const job =
+      MOCK_JOBS.find((j) => j.id === id) ?? mockSessionCreatedJobs.find((j) => j.id === id) ?? null
+    if (!job || !isJobPubliclyListed(job)) {
+      return make404Response(config)
+    }
     return makeResponse(job, 'Job detail')
   }
 
   // POST /jobs
   if (method === 'post' && url === '/jobs') {
     const body = parseBody(config)
+    const visibility = (body.visibility as string) ?? 'public'
+    const isDraft = visibility === 'private'
+    const numericId = (BigInt(Date.now()) * 1000000n + BigInt(Math.floor(Math.random() * 1_000_000))).toString()
     const newJob: Job = {
-      id: `job-${Date.now()}`,
+      ...body,
+      id: numericId,
       clientId: 'user-client-01',
       proposalCount: 0,
-      status: 'open',
+      status: isDraft ? 'draft' : 'pending_verification',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       isRemote: true,
-      ...body,
     } as Job
+    mockSessionCreatedJobs.unshift(newJob)
     return makeResponse(newJob, 'Job created')
   }
 
@@ -319,7 +357,19 @@ export async function resolveMockRequest(
   // ── USERS ─────────────────────────────────────────────────
 
   if (method === 'get' && url === '/users/freelancers') {
-    return makeResponse(MOCK_FREELANCERS, 'Freelancers fetched')
+    const data = MOCK_FREELANCERS
+    return makeResponse(
+      {
+        data,
+        meta: {
+          page: 1,
+          limit: 12,
+          total: data.length,
+          totalPages: Math.max(1, Math.ceil(data.length / 12)),
+        },
+      },
+      'Freelancers fetched',
+    )
   }
 
   if (method === 'post' && url === '/users/me/avatar') {
@@ -359,7 +409,12 @@ export async function resolveMockRequest(
   // GET /users/:id/freelancer-profile
   const freelancerProfileMatch = url.match(/^\/users\/([^/]+)\/freelancer-profile$/)
   if (method === 'get' && freelancerProfileMatch) {
-    return makeResponse(MOCK_FREELANCERS[0], 'Freelancer profile fetched')
+    const requestedId = freelancerProfileMatch[1]
+    const found = MOCK_FREELANCERS.find((f) => f.id === requestedId || f.userId === requestedId)
+    const payload = found
+      ? { ...found, id: requestedId, userId: found.userId }
+      : { ...MOCK_FREELANCERS[0], id: requestedId, userId: requestedId }
+    return makeResponse(payload, 'Freelancer profile fetched')
   }
 
   // GET /users/:id/client-profile

@@ -13,7 +13,7 @@ export class ProposalsService {
         freelancerId,
         coverLetter: dto.coverLetter,
         bidAmount: dto.bidAmount,
-        bidType: dto.bidType ?? 'fixed',
+        bidType: (dto.bidType as any) ?? 'fixed',
         estimatedDuration: dto.estimatedDuration,
         milestones: (dto.milestones ?? []) as any,
         answers: (dto.answers ?? []) as any,

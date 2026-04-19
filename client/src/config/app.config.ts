@@ -54,4 +54,6 @@ export const PLATFORM_CONFIG = {
 export const TOAST_CONFIG = {
   defaultDuration: 4000,
   maxToasts: 5,
+  /** Popup toasts app-wide. Opt in with `VITE_ENABLE_TOASTS=true` in env (.env.development.local, etc.). */
+  enabled: import.meta.env.VITE_ENABLE_TOASTS === 'true',
 } as const

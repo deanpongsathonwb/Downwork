@@ -104,7 +104,15 @@ export const createAxiosInstance = (): AxiosInstance => {
       (response: AxiosResponse) => response,
       (error: unknown) => {
         if (error && typeof error === 'object' && '__isMock' in error) {
-          return Promise.resolve((error as unknown as { __mockResponse: AxiosResponse }).__mockResponse)
+          const mockResponse = (error as unknown as { __mockResponse: AxiosResponse }).__mockResponse
+          if (mockResponse.status >= 400) {
+            return Promise.reject({
+              ...error,
+              isAxiosError: true,
+              response: mockResponse,
+            })
+          }
+          return Promise.resolve(mockResponse)
         }
         return Promise.reject(error)
       },
@@ -132,8 +140,19 @@ export const createAxiosInstance = (): AxiosInstance => {
 
       const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean }
 
+      // Login/register (and similar) return 401 for invalid input — not an expired session.
+      // Do not run refresh + session_expired redirect for those requests.
+      const reqUrl = originalRequest.url ?? ''
+      const skipRefresh401 =
+        reqUrl.includes('/auth/login') ||
+        reqUrl.includes('/auth/register') ||
+        reqUrl.includes('/auth/forgot-password') ||
+        reqUrl.includes('/auth/reset-password') ||
+        reqUrl.includes('/auth/verify-email') ||
+        reqUrl.includes('/auth/check-email')
+
       // 401 → attempt token refresh once
-      if (error.response?.status === 401 && !originalRequest._retry) {
+      if (error.response?.status === 401 && !originalRequest._retry && !skipRefresh401) {
         if (isRefreshing) {
           return new Promise((resolve, reject) => {
             failedQueue.push({ resolve, reject })

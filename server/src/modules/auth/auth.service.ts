@@ -4,36 +4,63 @@ import {
   UnauthorizedException,
   ConflictException,
   NotFoundException,
+  Inject,
+  Logger,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
+import { randomBytes } from 'crypto';
 import * as speakeasy from 'speakeasy';
 import * as QRCode from 'qrcode';
 import { PrismaService } from '../../prisma/prisma.service';
+import { normalizeEmail } from '../../common/utils/normalize-email';
+import {
+  looksLikeEmail,
+  normalizeUsername,
+  isValidUsernameNormalized,
+  USERNAME_MAX,
+} from '../../common/utils/normalize-username';
 import { LoginDto, RegisterDto, ResetPasswordDto, ChangeEmailDto } from './dto/auth.dto';
-import { randomUUID } from 'crypto';
+import { EMAIL_SERVICE, type EmailService } from '../email/email.interface';
+import { EmailTemplates } from '../email/email.templates';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
+    private config: ConfigService,
+    @Inject(EMAIL_SERVICE) private emailService: EmailService,
+    private emailTemplates: EmailTemplates,
   ) {}
 
+  /** Public registration flow: true if no user with this normalized email. */
+  async isRegisterEmailAvailable(rawEmail: string): Promise<{ available: boolean }> {
+    const email = normalizeEmail(rawEmail);
+    const existing = await this.prisma.user.findUnique({ where: { email } });
+    return { available: !existing };
+  }
+
   async register(dto: RegisterDto) {
-    const existing = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    const email = normalizeEmail(dto.email);
+    const existing = await this.prisma.user.findUnique({ where: { email } });
     if (existing) throw new ConflictException('Email already registered');
 
     const hashed = await bcrypt.hash(dto.password, 12);
-    const emailVerifyToken = randomUUID();
+    const emailVerifyToken = randomBytes(32).toString('hex');
+    const username = await this.pickUsername(dto, email);
 
     const user = await this.prisma.user.create({
       data: {
-        email: dto.email,
+        email,
+        username,
         password: hashed,
         firstName: dto.firstName,
         lastName: dto.lastName,
-        role: dto.role,
+        role: dto.role as any,
         emailVerifyToken,
       },
     });
@@ -47,6 +74,11 @@ export class AuthService {
     const tokens = await this.generateTokens(user.id, user.email, user.role);
     await this.createSession(user.id, tokens.refreshToken, 'Registration');
 
+    const template = this.emailTemplates.verifyEmail(user.firstName, emailVerifyToken);
+    await this.emailService.send({ to: user.email, ...template }).catch((err) => {
+      this.logger.error(`Failed to send verification email to ${user.email}`, err);
+    });
+
     return {
       user: this.sanitizeUser(user),
       tokens,
@@ -54,14 +86,16 @@ export class AuthService {
   }
 
   async login(dto: LoginDto) {
-    const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
-    if (!user) throw new UnauthorizedException('Invalid credentials');
+    const user = await this.findUserForLogin(dto.email);
+    if (!user || user.deletedAt) {
+      throw new UnauthorizedException('Username or password is incorrect.');
+    }
 
     if (user.status === 'banned') throw new UnauthorizedException('Account banned');
     if (user.status === 'deactivated') throw new UnauthorizedException('Account deactivated');
 
     const valid = await bcrypt.compare(dto.password, user.password);
-    if (!valid) throw new UnauthorizedException('Invalid credentials');
+    if (!valid) throw new UnauthorizedException('Username or password is incorrect.');
 
     if (user.twoFactorEnabled) {
       if (!dto.twoFactorCode) {
@@ -71,6 +105,7 @@ export class AuthService {
         secret: user.twoFactorSecret!,
         encoding: 'base32',
         token: dto.twoFactorCode,
+        window: 1,
       });
       if (!verified) throw new UnauthorizedException('Invalid 2FA code');
     }
@@ -93,11 +128,14 @@ export class AuthService {
   async refreshToken(token: string) {
     const session = await this.prisma.session.findUnique({ where: { token } });
     if (!session || session.expiresAt < new Date()) {
+      if (session) {
+        await this.prisma.session.delete({ where: { id: session.id } });
+      }
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
 
     const user = await this.prisma.user.findUnique({ where: { id: session.userId } });
-    if (!user) throw new UnauthorizedException();
+    if (!user || user.deletedAt) throw new UnauthorizedException();
 
     const tokens = await this.generateTokens(user.id, user.email, user.role);
 
@@ -110,10 +148,11 @@ export class AuthService {
   }
 
   async forgotPassword(email: string) {
-    const user = await this.prisma.user.findUnique({ where: { email } });
-    if (!user) return; // silent fail for security
+    const normalized = normalizeEmail(email);
+    const user = await this.prisma.user.findUnique({ where: { email: normalized } });
+    if (!user || user.deletedAt) return;
 
-    const resetToken = randomUUID();
+    const resetToken = randomBytes(32).toString('hex');
     await this.prisma.user.update({
       where: { id: user.id },
       data: {
@@ -121,7 +160,11 @@ export class AuthService {
         passwordResetExpires: new Date(Date.now() + 3600000),
       },
     });
-    // In production: send email with resetToken
+
+    const template = this.emailTemplates.resetPassword(user.firstName, resetToken);
+    await this.emailService.send({ to: user.email, ...template }).catch((err) => {
+      this.logger.error(`Failed to send reset email to ${user.email}`, err);
+    });
   }
 
   async resetPassword(dto: ResetPasswordDto) {
@@ -134,14 +177,18 @@ export class AuthService {
     if (!user) throw new BadRequestException('Invalid or expired reset token');
 
     const hashed = await bcrypt.hash(dto.password, 12);
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: {
-        password: hashed,
-        passwordResetToken: null,
-        passwordResetExpires: null,
-      },
-    });
+
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          password: hashed,
+          passwordResetToken: null,
+          passwordResetExpires: null,
+        },
+      }),
+      this.prisma.session.deleteMany({ where: { userId: user.id } }),
+    ]);
   }
 
   async verifyEmail(token: string) {
@@ -155,12 +202,16 @@ export class AuthService {
   }
 
   async resendVerification(userId: string) {
-    const token = randomUUID();
-    await this.prisma.user.update({
+    const token = randomBytes(32).toString('hex');
+    const user = await this.prisma.user.update({
       where: { id: userId },
       data: { emailVerifyToken: token },
     });
-    // In production: send verification email
+
+    const template = this.emailTemplates.verifyEmail(user.firstName, token);
+    await this.emailService.send({ to: user.email, ...template }).catch((err) => {
+      this.logger.error(`Failed to send verification email to ${user.email}`, err);
+    });
   }
 
   async getMe(userId: string) {
@@ -179,7 +230,7 @@ export class AuthService {
       data: { twoFactorSecret: secret.base32 },
     });
     const qrCode = await QRCode.toDataURL(secret.otpauth_url!);
-    return { qrCode, secret: secret.base32 };
+    return { qrCode };
   }
 
   async verify2FA(userId: string, code: string) {
@@ -190,6 +241,7 @@ export class AuthService {
       secret: user.twoFactorSecret,
       encoding: 'base32',
       token: code,
+      window: 1,
     });
     if (!verified) throw new BadRequestException('Invalid 2FA code');
 
@@ -207,6 +259,7 @@ export class AuthService {
       secret: user.twoFactorSecret,
       encoding: 'base32',
       token: code,
+      window: 1,
     });
     if (!verified) throw new BadRequestException('Invalid 2FA code');
 
@@ -223,12 +276,19 @@ export class AuthService {
     const valid = await bcrypt.compare(dto.password, user.password);
     if (!valid) throw new UnauthorizedException('Invalid password');
 
-    const existing = await this.prisma.user.findUnique({ where: { email: dto.newEmail } });
+    const newEmail = normalizeEmail(dto.newEmail);
+    const existing = await this.prisma.user.findUnique({ where: { email: newEmail } });
     if (existing) throw new ConflictException('Email already in use');
 
+    const verifyToken = randomBytes(32).toString('hex');
     await this.prisma.user.update({
       where: { id: userId },
-      data: { email: dto.newEmail, isEmailVerified: false, emailVerifyToken: randomUUID() },
+      data: { email: newEmail, isEmailVerified: false, emailVerifyToken: verifyToken },
+    });
+
+    const template = this.emailTemplates.emailChanged(user.firstName, verifyToken);
+    await this.emailService.send({ to: newEmail, ...template }).catch((err) => {
+      this.logger.error(`Failed to send email change verification to ${newEmail}`, err);
     });
   }
 
@@ -239,14 +299,23 @@ export class AuthService {
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) throw new UnauthorizedException('Invalid password');
 
-    await this.prisma.user.delete({ where: { id: userId } });
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: userId },
+        data: { deletedAt: new Date(), status: 'deactivated', email: `deleted_${userId}@deleted.local` },
+      }),
+      this.prisma.session.deleteMany({ where: { userId } }),
+    ]);
   }
 
   async deactivateAccount(userId: string) {
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { status: 'deactivated' },
-    });
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: userId },
+        data: { status: 'deactivated' },
+      }),
+      this.prisma.session.deleteMany({ where: { userId } }),
+    ]);
   }
 
   async getSessions(userId: string) {
@@ -259,7 +328,7 @@ export class AuthService {
       device: s.device,
       ip: s.ip,
       lastActive: s.lastActive.toISOString(),
-      isCurrent: false, // client sets this based on matching token
+      isCurrent: false,
     }));
   }
 
@@ -275,30 +344,87 @@ export class AuthService {
 
   private async generateTokens(userId: string, email: string, role: string) {
     const payload = { sub: userId, email, role };
-    const accessToken = await this.jwtService.signAsync(payload, {
-      secret: process.env.JWT_ACCESS_SECRET,
-      expiresIn: 3600,
-    });
-    const refreshToken = await this.jwtService.signAsync(payload, {
-      secret: process.env.JWT_REFRESH_SECRET,
-      expiresIn: 604800,
-    });
+    const [accessToken, refreshToken] = await Promise.all([
+      this.jwtService.signAsync(payload, {
+        secret: this.config.get<string>('jwt.accessSecret'),
+        expiresIn: this.config.get<number>('jwt.accessExpiresIn', 3600),
+      }),
+      this.jwtService.signAsync(payload, {
+        secret: this.config.get<string>('jwt.refreshSecret'),
+        expiresIn: this.config.get<number>('jwt.refreshExpiresIn', 604800),
+      }),
+    ]);
     return { accessToken, refreshToken };
   }
 
   private async createSession(userId: string, token: string, device: string) {
+    const expiresIn = this.config.get<number>('jwt.refreshExpiresIn', 604800);
     await this.prisma.session.create({
       data: {
         userId,
         token,
         device,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        expiresAt: new Date(Date.now() + expiresIn * 1000),
       },
     });
   }
 
+  private async findUserForLogin(identifier: string) {
+    const raw = identifier.trim();
+    if (!raw) return null;
+    if (looksLikeEmail(raw)) {
+      const email = normalizeEmail(raw);
+      return this.prisma.user.findUnique({ where: { email } });
+    }
+    const username = normalizeUsername(raw);
+    if (!isValidUsernameNormalized(username)) {
+      throw new BadRequestException('Please enter a valid email address or username.');
+    }
+    return this.prisma.user.findFirst({ where: { username } });
+  }
+
+  private async pickUsername(dto: RegisterDto, normalizedEmail: string): Promise<string> {
+    if (dto.username?.trim()) {
+      const u = normalizeUsername(dto.username);
+      if (!isValidUsernameNormalized(u)) {
+        throw new BadRequestException(
+          'Username must be 3–32 characters (letters, numbers, . _ -).',
+        );
+      }
+      const taken = await this.prisma.user.findFirst({ where: { username: u } });
+      if (taken) throw new ConflictException('Username already taken');
+      return u;
+    }
+    return this.allocateUniqueUsernameFromEmail(normalizedEmail);
+  }
+
+  private async allocateUniqueUsernameFromEmail(normalizedEmail: string): Promise<string> {
+    const local = normalizedEmail.split('@')[0] ?? 'user';
+    let base = normalizeUsername(local);
+    if (base.length < 3) {
+      base = `u${randomBytes(4).toString('hex').slice(0, 7)}`;
+    }
+    base = base.slice(0, USERNAME_MAX);
+    let candidate = base;
+    for (let i = 0; i < 50; i++) {
+      const exists = await this.prisma.user.findFirst({ where: { username: candidate } });
+      if (!exists) return candidate;
+      const suffix = randomBytes(2).toString('hex');
+      candidate = `${base.slice(0, Math.max(3, USERNAME_MAX - suffix.length))}${suffix}`;
+    }
+    throw new ConflictException('Could not allocate username; try again.');
+  }
+
   private sanitizeUser(user: Record<string, unknown>) {
-    const { password, twoFactorSecret, emailVerifyToken, passwordResetToken, passwordResetExpires, ...safe } = user;
+    const {
+      password,
+      twoFactorSecret,
+      emailVerifyToken,
+      passwordResetToken,
+      passwordResetExpires,
+      deletedAt,
+      ...safe
+    } = user;
     return safe;
   }
 }

@@ -1,9 +1,40 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { Job, JobFilters, PaginationMeta, CreateJobPayload, UpdateJobPayload, SavedJob } from '@/types'
+import type {
+  Job,
+  JobFilters,
+  PaginationMeta,
+  CreateJobPayload,
+  UpdateJobPayload,
+  SavedJob,
+  PaginatedResponse,
+} from '@/types'
 import { jobService } from '@/services/api/job.service'
 import { useToastStore } from './toast.store'
 import { logger } from '@/utils/logger'
+
+/** Unwrap list + meta when the API wraps a paginated body inside TransformInterceptor’s `data`. */
+function jobsListFromFetchResponse(res: {
+  data: Job[] | PaginatedResponse<Job>
+  meta?: PaginationMeta | null
+}): { list: Job[]; meta: PaginationMeta | null } {
+  const payload = res.data
+  if (Array.isArray(payload)) {
+    return { list: payload, meta: res.meta ?? null }
+  }
+  const meta = payload.meta
+  const normalizedMeta: PaginationMeta | null = meta
+    ? {
+        page: meta.page,
+        limit: meta.limit,
+        total: meta.total,
+        totalPages: meta.totalPages,
+        hasNextPage: meta.hasNextPage ?? (meta as PaginationMeta & { hasMore?: boolean }).hasMore,
+        hasPrevPage: meta.hasPrevPage,
+      }
+    : null
+  return { list: payload.data, meta: normalizedMeta }
+}
 
 // ============================================================
 // JOB STORE — Pinia Composition API
@@ -35,8 +66,9 @@ export const useJobStore = defineStore('job', () => {
     error.value = null
     try {
       const res = await jobService.getJobs(filters.value)
-      jobs.value = append ? [...jobs.value, ...res.data] : res.data
-      pagination.value = res.meta ?? null
+      const { list, meta } = jobsListFromFetchResponse(res)
+      jobs.value = append ? [...jobs.value, ...list] : list
+      pagination.value = meta
     } catch (err) {
       logger.catch(err, 'JobStore.fetchJobs')
       error.value = 'Failed to load jobs.'
@@ -67,12 +99,17 @@ export const useJobStore = defineStore('job', () => {
     }
   }
 
-  async function createJob(payload: CreateJobPayload): Promise<Job | null> {
+  async function createJob(
+    payload: CreateJobPayload,
+    options?: { successToast?: boolean },
+  ): Promise<Job | null> {
     isLoading.value = true
     try {
       const res = await jobService.createJob(payload)
       jobs.value.unshift(res.data)
-      toast.success('Job Posted!', 'Your job is now live.')
+      if (options?.successToast !== false) {
+        toast.success('Job Posted!', 'Your job is now live.')
+      }
       return res.data
     } catch (err) {
       logger.catch(err, 'JobStore.createJob')

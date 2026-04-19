@@ -67,3 +67,13 @@ export interface ConnectsPackage {
   price: number
   bonus?: number
 }
+
+/** GET /payments/connects */
+export interface ConnectsBalanceResponse {
+  balance: number
+  /** Sum of connectsUsed on proposals this calendar month */
+  usedThisMonth: number
+  /** Proposals submitted this calendar month */
+  applicationsThisMonth: number
+  recentPurchases: { id: string; description: string; createdAt: string }[]
+}

@@ -129,10 +129,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.store'
+import { useUserStore } from '@/stores/user.store'
 import { useToastStore } from '@/stores/toast.store'
+import { userService } from '@/services/api/user.service'
+import { logger } from '@/utils/logger'
 import { TIMEZONE_OPTIONS, LANGUAGE_OPTIONS } from '@/constants/settings'
 import type { SelectOption } from '@/types'
 import AppTabs from '@/components/ui/AppTabs.vue'
@@ -149,6 +152,7 @@ import SettingsPrivacyToggles from '@/components/settings/SettingsPrivacyToggles
 import SettingsDangerZone from '@/components/settings/SettingsDangerZone.vue'
 
 const auth = useAuthStore()
+const userStore = useUserStore()
 const toast = useToastStore()
 const router = useRouter()
 
@@ -167,15 +171,15 @@ const tabs = [
 const form = reactive({
   firstName: auth.user?.firstName ?? '',
   lastName: auth.user?.lastName ?? '',
-  companyName: 'Acme Corp',
+  companyName: '',
   email: auth.user?.email ?? '',
-  phone: '+1 (555) 000-0000',
-  timezone: 'America/New_York',
+  phone: auth.user?.phone ?? '',
+  timezone: auth.user?.timezone ?? 'America/New_York',
   language: 'en',
-  website: 'https://acmecorp.com',
+  website: '',
   industry: 'tech',
   companySize: '10-99',
-  bio: 'We build cutting-edge SaaS products that help businesses grow.',
+  bio: '',
 })
 
 const billing = reactive({
@@ -227,11 +231,72 @@ const clientPrivacySettings = [
   { key: 'show_last_active', label: 'Show Last Active Status', description: 'Display when you were last online', enabled: false },
 ]
 
+function applyProfileToForm(): void {
+  const u = auth.user
+  const cp = userStore.clientProfile
+  if (u) {
+    form.firstName = u.firstName ?? ''
+    form.lastName = u.lastName ?? ''
+    form.email = u.email ?? ''
+    form.phone = u.phone ?? ''
+    form.timezone = u.timezone ?? 'America/New_York'
+  }
+  if (cp) {
+    form.companyName = cp.companyName ?? ''
+    form.website = cp.website ?? ''
+    form.industry = cp.industry || 'tech'
+    form.companySize = cp.companySize || '10-99'
+    form.bio = cp.description ?? ''
+  }
+}
+
+async function loadProfile(): Promise<void> {
+  const uid = auth.user?.id
+  if (!uid) return
+  try {
+    await auth.getMe()
+    await userStore.fetchClientProfile(uid)
+    applyProfileToForm()
+  } catch (err) {
+    logger.catch(err, 'ClientSettingsPage.loadProfile')
+  }
+}
+
+onMounted(() => {
+  void loadProfile()
+})
+
 async function save(): Promise<void> {
+  const uid = auth.user?.id
+  if (!uid) {
+    toast.error('Not signed in', 'Please log in again.')
+    return
+  }
   saving.value = true
-  await new Promise((r) => setTimeout(r, 800))
-  saving.value = false
-  toast.success('Settings Saved', 'Your information has been updated.')
+  try {
+    await userService.updateAccountSettings({
+      firstName: form.firstName,
+      lastName: form.lastName,
+      email: form.email,
+      phone: form.phone,
+      timezone: form.timezone,
+    })
+    await userService.updateClientProfile({
+      companyName: form.companyName || undefined,
+      website: form.website || undefined,
+      industry: form.industry,
+      companySize: form.companySize,
+      description: form.bio || undefined,
+    })
+    await auth.getMe()
+    await userStore.fetchClientProfile(uid)
+    applyProfileToForm()
+    toast.success('Settings Saved', 'Your information has been updated.')
+  } catch (err) {
+    logger.catch(err, 'ClientSettingsPage.save')
+  } finally {
+    saving.value = false
+  }
 }
 
 function setDefaultCard(id: string): void {

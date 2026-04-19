@@ -15,11 +15,17 @@
         :placeholder="placeholder"
         :disabled="disabled"
         :required="required"
+        @focus="emit('focus', $event)"
+        @blur="emit('blur', $event)"
         :class="[
-          'w-full border rounded-xl py-2.5 text-sm text-slate-900 placeholder-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-400',
+          'w-full border rounded-xl py-2.5 text-sm text-slate-900 placeholder-slate-400 transition-colors focus:outline-none focus:ring-2 disabled:bg-slate-50 disabled:text-slate-400',
+          error
+            ? 'border-red-500 bg-red-50/80 focus:ring-red-500 focus:border-red-500'
+            : warning
+              ? 'border-slate-300 bg-white focus:ring-[#8a9040] focus:border-transparent'
+              : 'border-slate-300 bg-white focus:ring-green-500 focus:border-transparent',
           $slots.prefix ? 'pl-10' : 'pl-4',
           isPassword || $slots.suffix ? 'pr-10' : 'pr-4',
-          error ? 'border-red-400 bg-red-50' : 'border-slate-300 bg-white',
         ]"
         v-bind="$attrs"
       />
@@ -45,7 +51,47 @@
         <slot name="suffix" />
       </div>
     </div>
-    <p v-if="error" class="text-xs text-red-600">{{ error }}</p>
+    <p
+      v-if="error"
+      class="flex items-start gap-1.5 text-xs font-medium text-red-600"
+      role="alert"
+    >
+      <svg
+        class="h-4 w-4 shrink-0 text-red-600 mt-0.5"
+        viewBox="0 0 20 20"
+        fill="currentColor"
+        aria-hidden="true"
+      >
+        <path
+          fill-rule="evenodd"
+          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+          clip-rule="evenodd"
+        />
+      </svg>
+      <span class="inline-flex flex-wrap items-baseline gap-x-1 gap-y-0.5">
+        <span>{{ error }}</span>
+        <slot name="error-after" />
+      </span>
+    </p>
+    <p
+      v-else-if="warning"
+      class="flex items-start gap-1.5 text-xs font-medium text-[#7a7a2e]"
+      role="status"
+    >
+      <svg
+        class="h-4 w-4 shrink-0 text-[#7a7a2e] mt-0.5"
+        viewBox="0 0 20 20"
+        fill="currentColor"
+        aria-hidden="true"
+      >
+        <path
+          fill-rule="evenodd"
+          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+          clip-rule="evenodd"
+        />
+      </svg>
+      <span>{{ warning }}</span>
+    </p>
     <p v-else-if="hint" class="text-xs text-slate-500">{{ hint }}</p>
   </div>
 </template>
@@ -59,6 +105,8 @@ interface Props {
   type?: string
   placeholder?: string
   error?: string
+  /** Soft validation (e.g. password length hint) — olive/warning tone, shown when `error` is empty */
+  warning?: string
   hint?: string
   disabled?: boolean
   required?: boolean
@@ -66,7 +114,11 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), { type: 'text' })
-const emit = defineEmits<{ 'update:modelValue': [value: string | number] }>()
+const emit = defineEmits<{
+  'update:modelValue': [value: string | number]
+  focus: [event: FocusEvent]
+  blur: [event: FocusEvent]
+}>()
 
 const showPassword = ref(false)
 const isPassword = computed(() => props.type === 'password')

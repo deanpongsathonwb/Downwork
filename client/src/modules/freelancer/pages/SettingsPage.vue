@@ -175,10 +175,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.store'
 import { useToastStore } from '@/stores/toast.store'
+import { userService } from '@/services/api/user.service'
+import { logger } from '@/utils/logger'
 import { usePaymentMethods } from '@/composables/usePaymentMethods'
 import { TIMEZONE_OPTIONS, LANGUAGE_OPTIONS } from '@/constants/settings'
 import AppInput from '@/components/ui/AppInput.vue'
@@ -210,8 +212,8 @@ const tabs = [
 
 const accountForm = reactive({
   email: auth.user?.email ?? '',
-  phone: '',
-  timezone: 'America/New_York',
+  phone: auth.user?.phone ?? '',
+  timezone: auth.user?.timezone ?? 'America/New_York',
   language: 'en',
 })
 
@@ -244,11 +246,38 @@ const freelancerPrivacySettings = [
   { key: 'allow_invites', label: 'Receive Job Invitations', description: 'Let clients invite you to apply for their jobs', enabled: true },
 ]
 
+function applyAccountFromAuth(): void {
+  const u = auth.user
+  if (!u) return
+  accountForm.email = u.email ?? ''
+  accountForm.phone = u.phone ?? ''
+  accountForm.timezone = u.timezone ?? 'America/New_York'
+}
+
+onMounted(() => {
+  void auth.getMe().then(() => applyAccountFromAuth()).catch((err) => logger.catch(err, 'FreelancerSettingsPage.load'))
+})
+
 async function save(): Promise<void> {
+  if (!auth.user?.id) {
+    toast.error('Not signed in', 'Please log in again.')
+    return
+  }
   saving.value = true
-  await new Promise((r) => setTimeout(r, 800))
-  saving.value = false
-  toast.success('Settings Saved')
+  try {
+    await userService.updateAccountSettings({
+      email: accountForm.email,
+      phone: accountForm.phone,
+      timezone: accountForm.timezone,
+    })
+    await auth.getMe()
+    applyAccountFromAuth()
+    toast.success('Settings Saved')
+  } catch (err) {
+    logger.catch(err, 'FreelancerSettingsPage.save')
+  } finally {
+    saving.value = false
+  }
 }
 
 function submitMethod(): void {

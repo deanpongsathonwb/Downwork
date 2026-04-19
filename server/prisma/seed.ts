@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
+import { seedMarketplaceJobs } from './seed-marketplace-jobs';
 
 const prisma = new PrismaClient();
 
@@ -41,9 +42,10 @@ async function main() {
   // ─── Users ──────────────────────────────────────────────────
   const admin = await prisma.user.upsert({
     where: { email: 'admin@downwork.com' },
-    update: {},
+    update: { username: 'admin' },
     create: {
       email: 'admin@downwork.com',
+      username: 'admin',
       password,
       firstName: 'Admin',
       lastName: 'User',
@@ -88,9 +90,10 @@ async function main() {
 
   const client2 = await prisma.user.upsert({
     where: { email: 'mike@designstudio.com' },
-    update: {},
+    update: { username: 'mikechen' },
     create: {
       email: 'mike@designstudio.com',
+      username: 'mikechen',
       password,
       firstName: 'Mike',
       lastName: 'Chen',
@@ -137,16 +140,16 @@ async function main() {
     create: {
       userId: freelancer1.id,
       title: 'Senior Full-Stack Developer',
-      bio: 'Passionate full-stack developer with 8+ years of experience building scalable web applications. Expert in React, Node.js, and cloud architecture.',
+      bio: 'Passionate full-stack developer with 8+ years of experience building scalable web applications.',
       hourlyRate: 85,
       availability: 'available',
-      skills: (['React', 'TypeScript', 'Node.js', 'PostgreSQL', 'AWS', 'Docker', 'GraphQL']),
-      categories: (['web-development', 'mobile-development']),
-      experience: ([
+      skills: ['React', 'TypeScript', 'Node.js', 'PostgreSQL', 'AWS', 'Docker', 'GraphQL'],
+      categories: ['web-development', 'mobile-development'],
+      experience: [
         { company: 'Google', role: 'Senior Software Engineer', from: '2020', to: '2024', description: 'Led frontend team for Google Maps' },
         { company: 'Startup XYZ', role: 'Full-Stack Developer', from: '2018', to: '2020', description: 'Built the entire platform from scratch' },
-      ]),
-      languages: ([{ language: 'English', proficiency: 'native' }, { language: 'Spanish', proficiency: 'fluent' }]),
+      ],
+      languages: [{ language: 'English', proficiency: 'native' }, { language: 'Spanish', proficiency: 'fluent' }],
       totalEarnings: 125000,
       completedJobs: 47,
       successRate: 98,
@@ -159,9 +162,10 @@ async function main() {
 
   const freelancer2 = await prisma.user.upsert({
     where: { email: 'emma@design.com' },
-    update: {},
+    update: { username: 'emmawatson' },
     create: {
       email: 'emma@design.com',
+      username: 'emmawatson',
       password,
       firstName: 'Emma',
       lastName: 'Watson',
@@ -177,12 +181,12 @@ async function main() {
     create: {
       userId: freelancer2.id,
       title: 'UI/UX Designer & Brand Strategist',
-      bio: 'Creative designer specializing in user experience and brand identity. 6+ years helping startups and enterprises craft beautiful digital products.',
+      bio: 'Creative designer specializing in user experience and brand identity.',
       hourlyRate: 75,
       availability: 'available',
-      skills: (['Figma', 'Adobe XD', 'UI Design', 'UX Research', 'Prototyping', 'Brand Design']),
-      categories: (['design-creative', 'web-development']),
-      languages: ([{ language: 'English', proficiency: 'native' }]),
+      skills: ['Figma', 'Adobe XD', 'UI Design', 'UX Research', 'Prototyping', 'Brand Design'],
+      categories: ['design-creative', 'web-development'],
+      languages: [{ language: 'English', proficiency: 'native' }],
       totalEarnings: 89000,
       completedJobs: 35,
       successRate: 97,
@@ -195,9 +199,10 @@ async function main() {
 
   const freelancer3 = await prisma.user.upsert({
     where: { email: 'james@dev.com' },
-    update: {},
+    update: { username: 'jamespark' },
     create: {
       email: 'james@dev.com',
+      username: 'jamespark',
       password,
       firstName: 'James',
       lastName: 'Park',
@@ -213,12 +218,12 @@ async function main() {
     create: {
       userId: freelancer3.id,
       title: 'Mobile App Developer (React Native & Flutter)',
-      bio: 'Cross-platform mobile developer building high-performance apps. Published 15+ apps on App Store and Play Store.',
+      bio: 'Cross-platform mobile developer building high-performance apps.',
       hourlyRate: 70,
       availability: 'busy',
-      skills: (['React Native', 'Flutter', 'Swift', 'Kotlin', 'Firebase', 'TypeScript']),
-      categories: (['mobile-development']),
-      languages: ([{ language: 'English', proficiency: 'fluent' }, { language: 'Korean', proficiency: 'native' }]),
+      skills: ['React Native', 'Flutter', 'Swift', 'Kotlin', 'Firebase', 'TypeScript'],
+      categories: ['mobile-development'],
+      languages: [{ language: 'English', proficiency: 'fluent' }, { language: 'Korean', proficiency: 'native' }],
       totalEarnings: 67000,
       completedJobs: 28,
       successRate: 96,
@@ -237,9 +242,9 @@ async function main() {
       id: 'job-1',
       clientId: client1.id,
       title: 'Build a SaaS Dashboard with React & TypeScript',
-      description: 'We need an experienced React developer to build a comprehensive analytics dashboard for our SaaS platform. The dashboard should include real-time data visualization, user management, and reporting features. Must be responsive and follow our design system.',
+      description: 'We need an experienced React developer to build a comprehensive analytics dashboard.',
       category: 'web-development',
-      skills: (['React', 'TypeScript', 'Tailwind CSS', 'Chart.js', 'REST API']),
+      skills: ['React', 'TypeScript', 'Tailwind CSS', 'Chart.js', 'REST API'],
       budgetType: 'fixed',
       budgetFixed: 5000,
       duration: '1-3 months',
@@ -251,16 +256,16 @@ async function main() {
     },
   });
 
-  const job2 = await prisma.job.upsert({
+  await prisma.job.upsert({
     where: { id: 'job-2' },
     update: {},
     create: {
       id: 'job-2',
       clientId: client1.id,
       title: 'Mobile App Development - React Native',
-      description: 'Looking for a skilled React Native developer to build a cross-platform mobile app for our food delivery service. The app needs to support real-time tracking, push notifications, and payment integration.',
-      category: 'mobile-development',
-      skills: (['React Native', 'TypeScript', 'Firebase', 'Stripe', 'Maps API']),
+      description: 'Looking for a skilled React Native developer to build a cross-platform mobile app.',
+      category: 'mobile-apps',
+      skills: ['React Native', 'TypeScript', 'Firebase', 'Stripe', 'Maps API'],
       budgetType: 'hourly',
       budgetMin: 50,
       budgetMax: 80,
@@ -272,16 +277,16 @@ async function main() {
     },
   });
 
-  const job3 = await prisma.job.upsert({
+  await prisma.job.upsert({
     where: { id: 'job-3' },
     update: {},
     create: {
       id: 'job-3',
       clientId: client2.id,
       title: 'Brand Identity & UI Design for Fintech Startup',
-      description: 'We are a fintech startup looking for a talented designer to create our complete brand identity including logo, color palette, typography, and UI design for our web and mobile applications.',
-      category: 'design-creative',
-      skills: (['Figma', 'Brand Design', 'UI Design', 'Logo Design', 'Design Systems']),
+      description: 'We are a fintech startup looking for a talented designer.',
+      category: 'design',
+      skills: ['Figma', 'Brand Design', 'UI Design', 'Logo Design', 'Design Systems'],
       budgetType: 'fixed',
       budgetFixed: 3000,
       duration: '1-3 months',
@@ -292,16 +297,16 @@ async function main() {
     },
   });
 
-  const job4 = await prisma.job.upsert({
+  await prisma.job.upsert({
     where: { id: 'job-4' },
     update: {},
     create: {
       id: 'job-4',
       clientId: client2.id,
       title: 'WordPress E-commerce Website',
-      description: 'Need a WordPress developer to set up an e-commerce website with WooCommerce. Should include product catalog, shopping cart, checkout, and payment gateway integration.',
+      description: 'Need a WordPress developer to set up an e-commerce website with WooCommerce.',
       category: 'web-development',
-      skills: (['WordPress', 'WooCommerce', 'PHP', 'CSS', 'Payment Integration']),
+      skills: ['WordPress', 'WooCommerce', 'PHP', 'CSS', 'Payment Integration'],
       budgetType: 'fixed',
       budgetFixed: 1500,
       duration: 'less than 1 month',
@@ -312,17 +317,17 @@ async function main() {
     },
   });
 
-  const job5 = await prisma.job.upsert({
+  await prisma.job.upsert({
     where: { id: 'job-5' },
     update: {},
     create: {
       id: 'job-5',
       clientId: client1.id,
       title: 'API Integration & Backend Development (Node.js)',
-      description: 'We need a backend developer to integrate multiple third-party APIs and build RESTful endpoints for our platform. Experience with payment gateways (Stripe), messaging (Twilio), and cloud services required.',
+      description: 'We need a backend developer to integrate multiple third-party APIs.',
       category: 'web-development',
       subcategory: 'backend',
-      skills: (['Node.js', 'Express', 'PostgreSQL', 'Stripe API', 'REST API', 'Docker']),
+      skills: ['Node.js', 'Express', 'PostgreSQL', 'Stripe API', 'REST API', 'Docker'],
       budgetType: 'hourly',
       budgetMin: 60,
       budgetMax: 100,
@@ -342,17 +347,17 @@ async function main() {
       id: 'prop-1',
       jobId: job1.id,
       freelancerId: freelancer1.id,
-      coverLetter: 'I have extensive experience building SaaS dashboards with React and TypeScript. I recently completed a similar project for a Fortune 500 company. I can deliver this within 6 weeks with full test coverage.',
+      coverLetter: 'I have extensive experience building SaaS dashboards with React and TypeScript.',
       bidAmount: 4500,
       bidType: 'fixed',
       estimatedDuration: '6 weeks',
       status: 'pending',
-      milestones: ([
+      milestones: [
         { title: 'UI Foundation & Layout', amount: 1000 },
         { title: 'Data Visualization & Charts', amount: 1500 },
         { title: 'User Management & Reporting', amount: 1500 },
         { title: 'Testing & Polish', amount: 500 },
-      ]),
+      ],
     },
   });
 
@@ -361,9 +366,9 @@ async function main() {
     update: {},
     create: {
       id: 'prop-2',
-      jobId: job3.id,
+      jobId: 'job-3',
       freelancerId: freelancer2.id,
-      coverLetter: 'As a UI/UX designer with fintech experience, I understand the unique challenges of designing for financial products. I would love to create a cohesive brand identity that communicates trust and innovation.',
+      coverLetter: 'As a UI/UX designer with fintech experience, I understand the unique challenges.',
       bidAmount: 2800,
       bidType: 'fixed',
       estimatedDuration: '4 weeks',
@@ -376,9 +381,9 @@ async function main() {
     update: {},
     create: {
       id: 'prop-3',
-      jobId: job2.id,
+      jobId: 'job-2',
       freelancerId: freelancer3.id,
-      coverLetter: 'I specialize in React Native development and have built several food delivery apps. I can integrate real-time tracking, push notifications, and Stripe payments seamlessly.',
+      coverLetter: 'I specialize in React Native development and have built several food delivery apps.',
       bidAmount: 65,
       bidType: 'hourly',
       estimatedDuration: '4 months',
@@ -392,7 +397,7 @@ async function main() {
     update: {},
     create: {
       id: 'contract-1',
-      jobId: job2.id,
+      jobId: 'job-2',
       clientId: client1.id,
       freelancerId: freelancer3.id,
       title: 'Mobile App Development - Food Delivery',
@@ -422,8 +427,8 @@ async function main() {
         authorId: client1.id,
         targetId: freelancer3.id,
         rating: 5,
-        comment: 'Excellent developer! Delivered the first two milestones ahead of schedule with exceptional quality.',
-        skills: ({ communication: 5, quality: 5, expertise: 5, professionalism: 5, hireAgain: 5 }),
+        comment: 'Excellent developer! Delivered the first two milestones ahead of schedule.',
+        skills: { communication: 5, quality: 5, expertise: 5, professionalism: 5, hireAgain: 5 },
       },
     ],
   });
@@ -444,8 +449,8 @@ async function main() {
   await prisma.message.createMany({
     data: [
       { conversationId: conv1.id, senderId: client1.id, content: 'Hi Alex, I saw your profile and would love to discuss a project.', type: 'text' },
-      { conversationId: conv1.id, senderId: freelancer1.id, content: 'Hi Sarah! I would be happy to discuss. What kind of project do you have in mind?', type: 'text' },
-      { conversationId: conv1.id, senderId: client1.id, content: 'We need a React dashboard for our SaaS platform. Interested?', type: 'text' },
+      { conversationId: conv1.id, senderId: freelancer1.id, content: 'Hi Sarah! I would be happy to discuss.', type: 'text' },
+      { conversationId: conv1.id, senderId: client1.id, content: 'We need a React dashboard for our SaaS platform.', type: 'text' },
       { conversationId: conv1.id, senderId: freelancer1.id, content: 'Looking forward to working together!', type: 'text' },
     ],
   });
@@ -453,9 +458,9 @@ async function main() {
   // ─── Notifications ─────────────────────────────────────────
   await prisma.notification.createMany({
     data: [
-      { userId: freelancer1.id, type: 'proposal_received', title: 'New Job Match', message: 'A new job matching your skills has been posted: "Build a SaaS Dashboard"', link: '/jobs/job-1' },
-      { userId: client1.id, type: 'proposal_received', title: 'New Proposal', message: 'Alex Rivera submitted a proposal for "Build a SaaS Dashboard"', link: '/client/jobs/job-1' },
-      { userId: freelancer3.id, type: 'contract_started', title: 'Contract Started', message: 'Your contract "Mobile App Development" has started', link: '/freelancer/contracts/contract-1' },
+      { userId: freelancer1.id, type: 'proposal_received', title: 'New Job Match', message: 'A new job matching your skills has been posted', link: '/jobs/job-1' },
+      { userId: client1.id, type: 'proposal_received', title: 'New Proposal', message: 'Alex Rivera submitted a proposal', link: '/client/jobs/job-1' },
+      { userId: freelancer3.id, type: 'contract_started', title: 'Contract Started', message: 'Your contract has started', link: '/freelancer/contracts/contract-1' },
     ],
   });
 
@@ -463,7 +468,7 @@ async function main() {
   await prisma.transaction.createMany({
     data: [
       { userId: freelancer3.id, contractId: contract1.id, type: 'payment', amount: 2000, fee: 400, net: 1600, status: 'completed', description: 'Milestone: UI/UX & Wireframes' },
-      { userId: freelancer3.id, contractId: contract1.id, type: 'payment', amount: 4000, fee: 800, net: 3200, status: 'completed', description: 'Milestone: Core Features Development' },
+      { userId: freelancer3.id, contractId: contract1.id, type: 'payment', amount: 4000, fee: 800, net: 3200, status: 'completed', description: 'Milestone: Core Features' },
       { userId: freelancer1.id, type: 'deposit', amount: 500, fee: 0, net: 500, status: 'completed', description: 'Deposit via PayPal' },
     ],
   });
@@ -486,6 +491,9 @@ async function main() {
   console.log('  Freelancer: alex@freelance.com / password123');
   console.log('  Freelancer: emma@design.com / password123');
   console.log('  Freelancer: james@dev.com / password123');
+  console.log('  (Plus 12 marketplace demo clients — see prisma/marketplace-demo-clients.data.ts — same password.)');
+
+  await seedMarketplaceJobs(prisma);
 }
 
 main()

@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   CreateContractDto, AddMilestoneDto, UpdateMilestoneDto,
@@ -10,9 +11,9 @@ export class ContractsService {
   constructor(private prisma: PrismaService) {}
 
   async getContracts(userId: string, status?: string) {
-    const where = {
+    const where: Prisma.ContractWhereInput = {
       OR: [{ clientId: userId }, { freelancerId: userId }],
-      ...(status ? { status } : {}),
+      ...(status ? { status: status as any } : {}),
     };
     return this.prisma.contract.findMany({
       where,
@@ -51,7 +52,7 @@ export class ContractsService {
         freelancerId: dto.freelancerId,
         title: dto.title,
         description: dto.description,
-        paymentType: dto.paymentType ?? 'fixed',
+        paymentType: (dto.paymentType as any) ?? 'fixed',
         totalAmount,
         status: 'active',
       },
@@ -70,7 +71,7 @@ export class ContractsService {
       });
     }
 
-    await this.prisma.job.update({ where: { id: dto.jobId }, data: { status: 'in_progress', hiredCount: { increment: 1 } } });
+    await this.prisma.job.update({ where: { id: dto.jobId }, data: { status: 'filled', hiredCount: { increment: 1 } } });
 
     return this.getContract(contract.id);
   }
@@ -95,7 +96,7 @@ export class ContractsService {
     await this.ensureParticipant(contractId, userId);
     return this.prisma.milestone.update({
       where: { id: milestoneId },
-      data: { status: 'revision', note: dto.reason },
+      data: { status: 'pending', note: dto.reason },
     });
   }
 
@@ -103,7 +104,7 @@ export class ContractsService {
     await this.ensureParticipant(contractId, userId);
     return this.prisma.milestone.update({
       where: { id: milestoneId },
-      data: { status: 'funded' },
+      data: { status: 'in_progress' },
     });
   }
 
@@ -125,8 +126,8 @@ export class ContractsService {
         contractId,
         type: 'payment',
         amount: milestone.amount,
-        fee: milestone.amount * 0.2,
-        net: milestone.amount * 0.8,
+        fee: Number(milestone.amount) * 0.2,
+        net: Number(milestone.amount) * 0.8,
         description: `Milestone: ${milestone.title}`,
       },
     });

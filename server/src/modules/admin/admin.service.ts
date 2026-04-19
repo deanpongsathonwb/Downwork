@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
@@ -101,7 +102,7 @@ export class AdminService {
 
   async getPendingJobs() {
     return this.prisma.job.findMany({
-      where: { status: 'pending' },
+      where: { status: 'draft' },
       include: { client: { select: { id: true, firstName: true, lastName: true } } },
       orderBy: { createdAt: 'desc' },
     });
@@ -112,11 +113,11 @@ export class AdminService {
   }
 
   async rejectJob(jobId: string, _reason: string) {
-    await this.prisma.job.update({ where: { id: jobId }, data: { status: 'cancelled' } });
+    await this.prisma.job.update({ where: { id: jobId }, data: { status: 'closed' } });
   }
 
   async getDisputes(status?: string) {
-    const where = status ? { status } : {};
+    const where: Prisma.DisputeWhereInput = status ? { status: status as any } : {};
     return this.prisma.dispute.findMany({
       where,
       include: {
@@ -149,7 +150,7 @@ export class AdminService {
   }
 
   async getKYCSubmissions(status?: string) {
-    const where = status ? { status } : {};
+    const where: Prisma.KYCDocumentWhereInput = status ? { status: status as any } : {};
     return this.prisma.kYCDocument.findMany({
       where,
       include: { user: { select: { id: true, firstName: true, lastName: true, email: true } } },
@@ -172,7 +173,7 @@ export class AdminService {
   }
 
   async getReports(status?: string) {
-    const where = status ? { status } : {};
+    const where: Prisma.ReportWhereInput = status ? { status: status as any } : {};
     return this.prisma.report.findMany({
       where,
       include: {

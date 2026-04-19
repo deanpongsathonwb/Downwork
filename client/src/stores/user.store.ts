@@ -146,7 +146,7 @@ export const useUserStore = defineStore('user', () => {
     error.value = null
     try {
       const res = await userService.getFreelancers(params)
-      freelancersList.value = res.data
+      freelancersList.value = res.data.data
     } catch (err) {
       logger.catch(err, 'UserStore.fetchFreelancers')
       error.value = 'Failed to load freelancers.'

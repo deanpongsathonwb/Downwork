@@ -1,7 +1,7 @@
 <template>
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
     <!-- Breadcrumb -->
-    <AppBreadcrumb :items="[{ label: 'Browse Jobs', route: '/browse-jobs' }, { label: jobTitle }, { label: 'Submit Proposal' }]" class="mb-6" />
+    <AppBreadcrumb :items="[{ label: 'Browse Jobs', route: '/hire' }, { label: jobTitle }, { label: 'Submit Proposal' }]" class="mb-6" />
 
     <!-- Loading State -->
     <div v-if="jobStore.isLoadingDetail" class="grid grid-cols-1 lg:grid-cols-3 gap-8">

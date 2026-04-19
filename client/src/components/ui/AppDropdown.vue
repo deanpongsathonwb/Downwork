@@ -13,13 +13,14 @@
     >
       <div
         v-if="isOpen"
-        class="absolute z-50 mt-2 rounded-lg bg-white shadow-lg ring-1 ring-black/5 focus:outline-none"
+        class="absolute z-50 mt-2 rounded-lg focus:outline-none"
         :class="[
           alignRight ? 'right-0' : 'left-0',
           widthClass,
+          props.plain ? '' : 'bg-white shadow-lg ring-1 ring-black/5',
         ]"
       >
-        <div class="py-1">
+        <div :class="props.plain ? '' : 'py-1'">
           <slot />
         </div>
       </div>
@@ -32,12 +33,14 @@ import { ref, onMounted, onBeforeUnmount } from 'vue'
 
 interface Props {
   alignRight?: boolean
-  width?: 'sm' | 'md' | 'lg'
+  width?: 'sm' | 'md' | 'lg' | 'xl' | '2xl'
+  plain?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   alignRight: true,
   width: 'md',
+  plain: false,
 })
 
 const isOpen = ref(false)
@@ -47,6 +50,8 @@ const widthClass = {
   sm: 'w-40',
   md: 'w-48',
   lg: 'w-56',
+  xl: 'w-64',
+  '2xl': 'w-72',
 }[props.width]
 
 function toggle() {

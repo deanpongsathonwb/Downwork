@@ -10,9 +10,12 @@ export type WithdrawalMethod = 'bank_transfer' | 'paypal' | 'payoneer' | 'wise' 
 export interface User {
   id: string
   email: string
+  username?: string
   role: UserRole
   firstName: string
   lastName: string
+  phone?: string
+  timezone?: string
   avatar?: string
   isEmailVerified: boolean
   is2FAEnabled: boolean
@@ -62,6 +65,8 @@ export interface ClientProfile {
   companyName?: string
   industry?: string
   companySize?: string
+  website?: string
+  description?: string
   location: string
   totalSpent: number
   totalHires: number

@@ -4,6 +4,41 @@ import { requiresAuth, requiresRole } from '@/router/guards/auth.guard'
 const clientGuards = [requiresAuth, requiresRole(['client'])]
 
 export const clientRoutes: RouteRecordRaw[] = [
+  /** Full-screen flows (no dashboard chrome / sidebar). */
+  {
+    path: '/job-post',
+    component: () => import('@/layouts/StandaloneFlowLayout.vue'),
+    beforeEnter: clientGuards,
+    meta: { title: 'Client', requiresAuth: true, roles: ['client'] },
+    children: [
+      {
+        path: 'instant/welcome',
+        name: 'client-job-post-instant-welcome',
+        component: () => import('@/modules/auth/pages/ClientFirstJobWelcomePage.vue'),
+        meta: { title: 'Your first job' },
+      },
+    ],
+  },
+  {
+    path: '/client/job-post',
+    component: () => import('@/layouts/StandaloneFlowLayout.vue'),
+    beforeEnter: clientGuards,
+    meta: { title: 'Client', requiresAuth: true, roles: ['client'] },
+    children: [
+      {
+        path: 'instant/title',
+        name: 'client-new-job-guided',
+        component: () => import('@/modules/client/pages/GuidedJobPostPage.vue'),
+        meta: { title: 'Post a Job' },
+      },
+      {
+        path: 'instant/review',
+        name: 'client-job-post-instant-review',
+        component: () => import('@/modules/client/pages/JobPostInstantReviewPage.vue'),
+        meta: { title: 'Review' },
+      },
+    ],
+  },
   {
     path: '/client',
     redirect: '/client/dashboard',

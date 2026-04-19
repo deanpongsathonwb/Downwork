@@ -2,89 +2,242 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// For local dev: sqlite | For production: postgresql
-// Change provider and DATABASE_URL in .env when deploying
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
+// ─── Enums ──────────────────────────────────────────────────
+
+enum UserRole {
+  freelancer
+  client
+  admin
+}
+
+enum UserStatus {
+  active
+  deactivated
+  banned
+  suspended
+}
+
+enum Availability {
+  available
+  busy
+  not_available
+}
+
+enum BudgetType {
+  fixed
+  hourly
+}
+
+enum ExperienceLevel {
+  entry
+  intermediate
+  expert
+}
+
+enum JobVisibility {
+  public
+  private
+  invite_only
+}
+
+enum JobStatus {
+  draft
+  pending_verification
+  open
+  paused
+  closed
+  filled
+}
+
+enum ProposalStatus {
+  pending
+  shortlisted
+  accepted
+  rejected
+  withdrawn
+}
+
+enum ContractStatus {
+  pending
+  active
+  paused
+  completed
+  cancelled
+  disputed
+}
+
+enum MilestoneStatus {
+  pending
+  in_progress
+  submitted
+  approved
+  released
+  disputed
+}
+
+enum TransactionType {
+  payment
+  withdrawal
+  deposit
+  refund
+  connects_purchase
+  fee
+}
+
+enum TransactionStatus {
+  pending
+  completed
+  failed
+  cancelled
+}
+
+enum PaymentMethodType {
+  card
+  bank_account
+  paypal
+}
+
+enum KYCStatus {
+  pending
+  approved
+  rejected
+}
+
+enum DisputeStatus {
+  open
+  under_review
+  resolved
+  closed
+}
+
+enum ReportStatus {
+  pending
+  reviewed
+  resolved
+  dismissed
+}
+
+enum InvitationStatus {
+  pending
+  accepted
+  declined
+  expired
+}
+
+enum MessageType {
+  text
+  file
+  offer
+  system
+}
+
+enum NotificationType {
+  proposal_received
+  proposal_accepted
+  proposal_rejected
+  contract_started
+  contract_completed
+  milestone_submitted
+  milestone_approved
+  payment_received
+  message_received
+  review_received
+  invitation_received
+  system
+}
+
 // ─── User ────────────────────────────────────────────────────
 
 model User {
-  id                String   @id @default(uuid())
-  email             String   @unique
-  password          String
-  firstName         String
-  lastName          String
-  role              String   @default("freelancer")
-  avatar            String?
-  phone             String?
-  location          String?
-  timezone          String?
-  isEmailVerified   Boolean  @default(false)
-  emailVerifyToken  String?
+  id                 String     @id @default(uuid())
+  email              String     @unique
+  username           String?    @unique
+  password           String
+  firstName          String
+  lastName           String
+  role               UserRole   @default(freelancer)
+  avatar             String?
+  phone              String?
+  location           String?
+  timezone           String?
+  isEmailVerified    Boolean    @default(false)
+  emailVerifyToken   String?
   passwordResetToken String?
   passwordResetExpires DateTime?
-  twoFactorSecret   String?
-  twoFactorEnabled  Boolean  @default(false)
-  status            String   @default("active")
-  banReason         String?
-  suspendedUntil    DateTime?
-  onboardingComplete Boolean @default(false)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  twoFactorSecret    String?
+  twoFactorEnabled   Boolean    @default(false)
+  status             UserStatus @default(active)
+  banReason          String?
+  suspendedUntil     DateTime?
+  onboardingComplete Boolean    @default(false)
+  deletedAt          DateTime?
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
 
-  freelancerProfile FreelancerProfile?
-  clientProfile     ClientProfile?
-  sessions          Session[]
-  jobsPosted        Job[]              @relation("JobClient")
-  proposals         Proposal[]
-  contractsAsClient Contract[]         @relation("ContractClient")
-  contractsAsFreelancer Contract[]     @relation("ContractFreelancer")
-  reviewsGiven      Review[]           @relation("ReviewAuthor")
-  reviewsReceived   Review[]           @relation("ReviewTarget")
-  messagesFrom      Message[]
-  conversationsAsUser1 Conversation[]  @relation("ConvUser1")
-  conversationsAsUser2 Conversation[]  @relation("ConvUser2")
-  notifications     Notification[]
-  transactions      Transaction[]
-  paymentMethods    PaymentMethod[]
-  kycDocuments      KYCDocument[]
-  invitationsSent   Invitation[]       @relation("InvitationSender")
-  invitationsReceived Invitation[]     @relation("InvitationReceiver")
-  disputesRaised    Dispute[]          @relation("DisputeInitiator")
-  disputesReceived  Dispute[]          @relation("DisputeRespondent")
-  reports           Report[]           @relation("Reporter")
-  reportsAgainst    Report[]           @relation("Reported")
-  savedJobs         SavedJob[]
+  freelancerProfile     FreelancerProfile?
+  clientProfile         ClientProfile?
+  sessions              Session[]
+  jobsPosted            Job[]              @relation("JobClient")
+  proposals             Proposal[]
+  contractsAsClient     Contract[]         @relation("ContractClient")
+  contractsAsFreelancer Contract[]         @relation("ContractFreelancer")
+  reviewsGiven          Review[]           @relation("ReviewAuthor")
+  reviewsReceived       Review[]           @relation("ReviewTarget")
+  messagesFrom          Message[]
+  conversationsAsUser1  Conversation[]     @relation("ConvUser1")
+  conversationsAsUser2  Conversation[]     @relation("ConvUser2")
+  notifications         Notification[]
+  transactions          Transaction[]
+  paymentMethods        PaymentMethod[]
+  kycDocuments          KYCDocument[]
+  invitationsSent       Invitation[]       @relation("InvitationSender")
+  invitationsReceived   Invitation[]       @relation("InvitationReceiver")
+  disputesRaised        Dispute[]          @relation("DisputeInitiator")
+  disputesReceived      Dispute[]          @relation("DisputeRespondent")
+  reports               Report[]           @relation("Reporter")
+  reportsAgainst        Report[]           @relation("Reported")
+  savedJobs             SavedJob[]
+  auditLogs             AuditLog[]
+
+  @@index([email])
+  @@index([role, status])
+  @@index([status])
+  @@index([deletedAt])
 }
 
 model FreelancerProfile {
-  id             String   @id @default(uuid())
-  userId         String   @unique
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title          String?
-  bio            String?
-  hourlyRate     Float?
-  availability   String   @default("available")
-  skills   Json     @default("[]")
-  categories   Json     @default("[]")
-  experience   Json     @default("[]")
-  education   Json     @default("[]")
-  certifications   Json     @default("[]")
-  languages   Json     @default("[]")
-  portfolioItems   Json     @default("[]")
-  totalEarnings  Float    @default(0)
-  completedJobs  Int      @default(0)
-  successRate    Float    @default(0)
-  rating         Float    @default(0)
-  reviewCount    Int      @default(0)
-  responseTime   String?
-  connectsBalance Int     @default(60)
-  profileCompleteness Int @default(0)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id                  String       @id @default(uuid())
+  userId              String       @unique
+  user                User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title               String?
+  bio                 String?
+  hourlyRate          Decimal?     @db.Decimal(10, 2)
+  availability        Availability @default(available)
+  skills              Json         @default("[]")
+  categories          Json         @default("[]")
+  experience          Json         @default("[]")
+  education           Json         @default("[]")
+  certifications      Json         @default("[]")
+  languages           Json         @default("[]")
+  portfolioItems      Json         @default("[]")
+  totalEarnings       Decimal      @default(0) @db.Decimal(12, 2)
+  completedJobs       Int          @default(0)
+  successRate         Decimal      @default(0) @db.Decimal(5, 2)
+  rating              Decimal      @default(0) @db.Decimal(3, 2)
+  reviewCount         Int          @default(0)
+  responseTime        String?
+  connectsBalance     Int          @default(60)
+  profileCompleteness Int          @default(0)
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  @@index([userId])
+  @@index([availability])
 }
 
 model ClientProfile {
@@ -96,14 +249,16 @@ model ClientProfile {
   industry        String?
   website         String?
   description     String?
-  totalSpent      Float    @default(0)
+  totalSpent      Decimal  @default(0) @db.Decimal(12, 2)
   totalJobsPosted Int      @default(0)
-  hireRate        Float    @default(0)
-  rating          Float    @default(0)
+  hireRate        Decimal  @default(0) @db.Decimal(5, 2)
+  rating          Decimal  @default(0) @db.Decimal(3, 2)
   reviewCount     Int      @default(0)
   paymentVerified Boolean  @default(false)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
+  @@index([userId])
 }
 
 model Session {
@@ -117,292 +272,354 @@ model Session {
   lastActive DateTime @default(now())
   expiresAt  DateTime
   createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([token])
 }
 
 // ─── Job ─────────────────────────────────────────────────────
 
 model Job {
-  id               String   @id @default(uuid())
-  clientId         String
-  client           User     @relation("JobClient", fields: [clientId], references: [id], onDelete: Cascade)
-  title            String
-  description      String
-  category         String
-  subcategory      String?
-  skills   Json     @default("[]")
-  budgetType       String   @default("fixed")
-  budgetMin        Float?
-  budgetMax        Float?
-  budgetFixed      Float?
-  duration         String?
-  experienceLevel  String   @default("intermediate")
-  scope            String?
-  visibility       String   @default("public")
-  status           String   @default("open")
-  attachments   Json     @default("[]")
-  screeningQuestions   Json     @default("[]")
-  location         String?
-  proposalCount    Int      @default(0)
-  viewCount        Int      @default(0)
-  hiredCount       Int      @default(0)
-  featured         Boolean  @default(false)
-  urgent           Boolean  @default(false)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id                 String          @id @default(uuid())
+  clientId           String
+  client             User            @relation("JobClient", fields: [clientId], references: [id], onDelete: Cascade)
+  title              String
+  description        String
+  category           String
+  subcategory        String?
+  skills             Json            @default("[]")
+  budgetType         BudgetType      @default(fixed)
+  budgetMin          Decimal?        @db.Decimal(10, 2)
+  budgetMax          Decimal?        @db.Decimal(10, 2)
+  budgetFixed        Decimal?        @db.Decimal(10, 2)
+  duration           String?
+  experienceLevel    ExperienceLevel @default(intermediate)
+  scope              String?
+  visibility         JobVisibility   @default(public)
+  status             JobStatus       @default(open)
+  attachments        Json            @default("[]")
+  screeningQuestions Json            @default("[]")
+  location           String?
+  proposalCount      Int             @default(0)
+  viewCount          Int             @default(0)
+  hiredCount         Int             @default(0)
+  featured           Boolean         @default(false)
+  urgent             Boolean         @default(false)
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
 
-  proposals        Proposal[]
-  contracts        Contract[]
-  invitations      Invitation[]
-  savedBy          SavedJob[]
+  proposals   Proposal[]
+  contracts   Contract[]
+  invitations Invitation[]
+  savedBy     SavedJob[]
+
+  @@index([clientId])
+  @@index([status])
+  @@index([category])
+  @@index([status, category])
+  @@index([experienceLevel])
+  @@index([createdAt])
+  @@index([budgetType])
 }
 
 model SavedJob {
-  id        String   @id @default(uuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  jobId     String
-  job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  savedAt   DateTime @default(now())
+  id      String   @id @default(uuid())
+  userId  String
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobId   String
+  job     Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  savedAt DateTime @default(now())
 
   @@unique([userId, jobId])
+  @@index([userId])
+  @@index([jobId])
 }
 
 // ─── Proposal ────────────────────────────────────────────────
 
 model Proposal {
-  id             String   @id @default(uuid())
-  jobId          String
-  job            Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  freelancerId   String
-  freelancer     User     @relation(fields: [freelancerId], references: [id], onDelete: Cascade)
-  coverLetter    String
-  bidAmount      Float
-  bidType        String   @default("fixed")
+  id                String         @id @default(uuid())
+  jobId             String
+  job               Job            @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  freelancerId      String
+  freelancer        User           @relation(fields: [freelancerId], references: [id], onDelete: Cascade)
+  coverLetter       String
+  bidAmount         Decimal        @db.Decimal(10, 2)
+  bidType           BudgetType     @default(fixed)
   estimatedDuration String?
-  attachments   Json     @default("[]")
-  answers   Json     @default("[]")
-  status         String   @default("pending")
-  milestones   Json     @default("[]")
-  connectsUsed   Int      @default(0)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  attachments       Json           @default("[]")
+  answers           Json           @default("[]")
+  status            ProposalStatus @default(pending)
+  milestones        Json           @default("[]")
+  connectsUsed      Int            @default(0)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  @@index([jobId])
+  @@index([freelancerId])
+  @@index([status])
 }
 
 // ─── Contract ────────────────────────────────────────────────
 
 model Contract {
-  id              String   @id @default(uuid())
-  jobId           String
-  job             Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  clientId        String
-  client          User     @relation("ContractClient", fields: [clientId], references: [id], onDelete: Cascade)
-  freelancerId    String
-  freelancer      User     @relation("ContractFreelancer", fields: [freelancerId], references: [id], onDelete: Cascade)
-  title           String
-  description     String?
-  totalAmount     Float    @default(0)
-  paidAmount      Float    @default(0)
-  paymentType     String   @default("fixed")
-  status          String   @default("active")
-  startDate       DateTime @default(now())
-  endDate         DateTime?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id             String         @id @default(uuid())
+  jobId          String
+  job            Job            @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  clientId       String
+  client         User           @relation("ContractClient", fields: [clientId], references: [id], onDelete: Cascade)
+  freelancerId   String
+  freelancer     User           @relation("ContractFreelancer", fields: [freelancerId], references: [id], onDelete: Cascade)
+  title          String
+  description    String?
+  totalAmount    Decimal        @default(0) @db.Decimal(12, 2)
+  paidAmount     Decimal        @default(0) @db.Decimal(12, 2)
+  paymentType    BudgetType     @default(fixed)
+  status         ContractStatus @default(active)
+  startDate      DateTime       @default(now())
+  endDate        DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 
-  milestones      Milestone[]
-  reviews         Review[]
-  disputes        Dispute[]
-  transactions    Transaction[]
+  milestones   Milestone[]
+  reviews      Review[]
+  disputes     Dispute[]
+  transactions Transaction[]
+
+  @@index([clientId])
+  @@index([freelancerId])
+  @@index([status])
+  @@index([jobId])
 }
 
 model Milestone {
-  id           String   @id @default(uuid())
-  contractId   String
-  contract     Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
-  title        String
-  description  String?
-  amount       Float
-  status       String   @default("pending")
-  dueDate      DateTime?
-  submittedAt  DateTime?
-  approvedAt   DateTime?
-  releasedAt   DateTime?
-  note         String?
-  order        Int      @default(0)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id          String          @id @default(uuid())
+  contractId  String
+  contract    Contract        @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  amount      Decimal         @db.Decimal(10, 2)
+  status      MilestoneStatus @default(pending)
+  dueDate     DateTime?
+  submittedAt DateTime?
+  approvedAt  DateTime?
+  releasedAt  DateTime?
+  note        String?
+  order       Int             @default(0)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([contractId])
+  @@index([status])
 }
 
 // ─── Review ──────────────────────────────────────────────────
 
 model Review {
-  id           String   @id @default(uuid())
-  contractId   String
-  contract     Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
-  authorId     String
-  author       User     @relation("ReviewAuthor", fields: [authorId], references: [id], onDelete: Cascade)
-  targetId     String
-  target       User     @relation("ReviewTarget", fields: [targetId], references: [id], onDelete: Cascade)
-  rating       Float
-  comment      String?
-  skills       Json?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id         String   @id @default(uuid())
+  contractId String
+  contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  authorId   String
+  author     User     @relation("ReviewAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  targetId   String
+  target     User     @relation("ReviewTarget", fields: [targetId], references: [id], onDelete: Cascade)
+  rating     Decimal  @db.Decimal(3, 2)
+  comment    String?
+  skills     Json?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([contractId])
+  @@index([authorId])
+  @@index([targetId])
 }
 
 // ─── Chat ────────────────────────────────────────────────────
 
 model Conversation {
-  id           String   @id @default(uuid())
-  user1Id      String
-  user1        User     @relation("ConvUser1", fields: [user1Id], references: [id], onDelete: Cascade)
-  user2Id      String
-  user2        User     @relation("ConvUser2", fields: [user2Id], references: [id], onDelete: Cascade)
-  jobId        String?
-  lastMessage  String?
+  id            String    @id @default(uuid())
+  user1Id       String
+  user1         User      @relation("ConvUser1", fields: [user1Id], references: [id], onDelete: Cascade)
+  user2Id       String
+  user2         User      @relation("ConvUser2", fields: [user2Id], references: [id], onDelete: Cascade)
+  jobId         String?
+  lastMessage   String?
   lastMessageAt DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
-  messages     Message[]
+  messages Message[]
 
   @@unique([user1Id, user2Id])
+  @@index([user1Id])
+  @@index([user2Id])
 }
 
 model Message {
-  id              String   @id @default(uuid())
-  conversationId  String
-  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  senderId        String
-  sender          User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
-  content         String
-  type            String   @default("text")
-  fileUrl         String?
-  fileName        String?
-  offerData       Json?
-  isRead          Boolean  @default(false)
-  createdAt       DateTime @default(now())
+  id             String      @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User        @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  content        String
+  type           MessageType @default(text)
+  fileUrl        String?
+  fileName       String?
+  offerData      Json?
+  isRead         Boolean     @default(false)
+  createdAt      DateTime    @default(now())
+
+  @@index([conversationId])
+  @@index([senderId])
+  @@index([conversationId, createdAt])
 }
 
 // ─── Notification ────────────────────────────────────────────
 
 model Notification {
-  id        String   @id @default(uuid())
+  id        String           @id @default(uuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type      String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
   title     String
   message   String
   link      String?
-  isRead    Boolean  @default(false)
+  isRead    Boolean          @default(false)
   metadata  Json?
-  createdAt DateTime @default(now())
+  createdAt DateTime         @default(now())
+
+  @@index([userId])
+  @@index([userId, isRead])
+  @@index([createdAt])
 }
 
 // ─── Payment ─────────────────────────────────────────────────
 
 model Transaction {
-  id          String   @id @default(uuid())
+  id          String            @id @default(uuid())
   userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   contractId  String?
-  contract    Contract? @relation(fields: [contractId], references: [id])
-  type        String
-  amount      Float
-  fee         Float    @default(0)
-  net         Float    @default(0)
-  status      String   @default("completed")
+  contract    Contract?         @relation(fields: [contractId], references: [id])
+  type        TransactionType
+  amount      Decimal           @db.Decimal(12, 2)
+  fee         Decimal           @default(0) @db.Decimal(12, 2)
+  net         Decimal           @default(0) @db.Decimal(12, 2)
+  status      TransactionStatus @default(completed)
   description String?
   reference   String?
-  createdAt   DateTime @default(now())
+  createdAt   DateTime          @default(now())
+
+  @@index([userId])
+  @@index([userId, type, status])
+  @@index([contractId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 model PaymentMethod {
-  id        String   @id @default(uuid())
+  id        String            @id @default(uuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type      String
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      PaymentMethodType
   label     String
   last4     String?
   brand     String?
-  isDefault Boolean  @default(false)
+  isDefault Boolean           @default(false)
   metadata  Json?
-  createdAt DateTime @default(now())
+  createdAt DateTime          @default(now())
+
+  @@index([userId])
 }
 
 // ─── KYC ─────────────────────────────────────────────────────
 
 model KYCDocument {
-  id              String   @id @default(uuid())
+  id              String    @id @default(uuid())
   userId          String
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   documentType    String
   documentUrl     String
   selfieUrl       String?
-  status          String   @default("pending")
+  status          KYCStatus @default(pending)
   rejectionReason String?
-  submittedAt     DateTime @default(now())
+  submittedAt     DateTime  @default(now())
   reviewedAt      DateTime?
+
+  @@index([userId])
+  @@index([status])
 }
 
 // ─── Invitation ──────────────────────────────────────────────
 
 model Invitation {
-  id           String   @id @default(uuid())
-  jobId        String
-  job          Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  senderId     String
-  sender       User     @relation("InvitationSender", fields: [senderId], references: [id], onDelete: Cascade)
-  receiverId   String
-  receiver     User     @relation("InvitationReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
-  message      String?
-  status       String   @default("pending")
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id         String           @id @default(uuid())
+  jobId      String
+  job        Job              @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  senderId   String
+  sender     User             @relation("InvitationSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId String
+  receiver   User             @relation("InvitationReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  message    String?
+  status     InvitationStatus @default(pending)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  @@index([jobId])
+  @@index([senderId])
+  @@index([receiverId])
 }
 
 // ─── Dispute ─────────────────────────────────────────────────
 
 model Dispute {
-  id            String   @id @default(uuid())
+  id            String        @id @default(uuid())
   contractId    String
-  contract      Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  contract      Contract      @relation(fields: [contractId], references: [id], onDelete: Cascade)
   initiatorId   String
-  initiator     User     @relation("DisputeInitiator", fields: [initiatorId], references: [id], onDelete: Cascade)
+  initiator     User          @relation("DisputeInitiator", fields: [initiatorId], references: [id], onDelete: Cascade)
   respondentId  String
-  respondent    User     @relation("DisputeRespondent", fields: [respondentId], references: [id], onDelete: Cascade)
+  respondent    User          @relation("DisputeRespondent", fields: [respondentId], references: [id], onDelete: Cascade)
   reason        String
   description   String
-  status        String   @default("open")
+  status        DisputeStatus @default(open)
   resolution    String?
   assignedAdmin String?
   resolvedAt    DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([contractId])
+  @@index([status])
 }
 
 // ─── Report ──────────────────────────────────────────────────
 
 model Report {
-  id          String   @id @default(uuid())
+  id          String       @id @default(uuid())
   reporterId  String
-  reporter    User     @relation("Reporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  reporter    User         @relation("Reporter", fields: [reporterId], references: [id], onDelete: Cascade)
   reportedId  String
-  reported    User     @relation("Reported", fields: [reportedId], references: [id], onDelete: Cascade)
+  reported    User         @relation("Reported", fields: [reportedId], references: [id], onDelete: Cascade)
   type        String
   reason      String
   description String?
-  status      String   @default("pending")
-  createdAt   DateTime @default(now())
+  status      ReportStatus @default(pending)
+  createdAt   DateTime     @default(now())
+
+  @@index([reporterId])
+  @@index([reportedId])
+  @@index([status])
 }
 
 // ─── Platform Settings ───────────────────────────────────────
 
 model PlatformSettings {
   id                  String  @id @default("default")
-  commissionRate      Float   @default(20)
-  minWithdrawal       Float   @default(50)
-  maxWithdrawal       Float   @default(10000)
+  commissionRate      Decimal @default(20) @db.Decimal(5, 2)
+  minWithdrawal       Decimal @default(50) @db.Decimal(10, 2)
+  maxWithdrawal       Decimal @default(10000) @db.Decimal(10, 2)
   maintenanceMode     Boolean @default(false)
   registrationEnabled Boolean @default(true)
   kycRequired         Boolean @default(false)
@@ -412,9 +629,29 @@ model PlatformSettings {
 // ─── Connects Package ────────────────────────────────────────
 
 model ConnectsPackage {
-  id       String @id @default(uuid())
+  id       String  @id @default(uuid())
   name     String
   connects Int
-  price    Float
+  price    Decimal @db.Decimal(10, 2)
   popular  Boolean @default(false)
+}
+
+// ─── Audit Log ───────────────────────────────────────────────
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String
+  entity    String
+  entityId  String?
+  metadata  Json?
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([entity, entityId])
+  @@index([createdAt])
 }

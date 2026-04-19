@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsNumber, Min, Max, IsIn } from 'class-validator';
+import { IsOptional, IsString, IsNumber, Min, Max, IsIn, IsEmail } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class FreelancerSearchDto {
@@ -42,6 +42,7 @@ export class UpdatePasswordDto {
 export class UpdateAccountDto {
   @IsOptional() @IsString() firstName?: string;
   @IsOptional() @IsString() lastName?: string;
+  @IsOptional() @IsEmail() email?: string;
   @IsOptional() @IsString() phone?: string;
   @IsOptional() @IsString() location?: string;
   @IsOptional() @IsString() timezone?: string;

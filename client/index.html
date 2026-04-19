@@ -3,7 +3,26 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Downwork | Hire Top Freelance Talent with Confidence</title>
+    <!-- Default tab title only until Vue runs; avoid flashing the home marketing title on every refresh. -->
+    <title>%VITE_APP_NAME%</title>
+    <script>
+      ;(function () {
+        var brand = '%VITE_APP_NAME%'
+        var path = (location.pathname || '/').replace(/\/*$/, '') || '/'
+        if (path === '/') {
+          document.title = brand + ' | Hire Top Freelance Talent with Confidence'
+          return
+        }
+        if (path === '/search/jobs') {
+          document.title = 'Search Freelance Jobs on ' + brand
+          return
+        }
+        if (path === '/search/talent') {
+          document.title = 'Search Freelance Talent on ' + brand
+          return
+        }
+      })()
+    </script>
 
     <!-- SEO -->
     <meta name="description" content="Downwork connects businesses with top freelancers worldwide. Post jobs, hire talent, and manage projects — all in one platform." />
@@ -29,7 +48,6 @@
 
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/favicon.svg" />
 
     <!-- Theme -->

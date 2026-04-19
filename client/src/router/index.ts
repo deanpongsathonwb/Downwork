@@ -1,4 +1,6 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
+import { APP_CONFIG } from '@/config/app.config'
+import { getHireTalentLanding, getHireTalentTitleMetaSegment } from '@/constants/hire-talent.landing'
 import { useAuthStore } from '@/stores/auth.store'
 import { publicRoutes } from './routes/public.routes'
 import { authRoutes } from './routes/auth.routes'
@@ -16,6 +18,12 @@ const errorRoutes: RouteRecordRaw[] = [
     name: '403',
     component: () => import('@/components/common/Error403.vue'),
     meta: { title: 'Access Denied' },
+  },
+  {
+    path: '/404',
+    name: 'static-404',
+    component: () => import('@/components/common/Error404.vue'),
+    meta: { title: 'Page Not Found' },
   },
   {
     path: '/:pathMatch(.*)*',
@@ -70,15 +78,46 @@ router.beforeEach((to) => {
   }
 })
 
-// ── GLOBAL NAVIGATION HOOK: page title ─────────────────────
+// ── GLOBAL NAVIGATION HOOK: page title (e.g. "Review - Downwork") ──
+// Keep /, /search/jobs, /search/talent titles aligned with the inline script in index.html (first paint).
 router.afterEach((to) => {
-  const baseTitle = 'Downwork | Hire Top Freelance Talent with Confidence'
+  const homeTitle = `${APP_CONFIG.name} | Hire Top Freelance Talent with Confidence`
+  const brand = APP_CONFIG.name
+
+  if (to.name === 'hire-talent-landing') {
+    const slug = typeof to.params.slug === 'string' ? to.params.slug : ''
+    const landing = getHireTalentLanding(slug)
+    if (landing) {
+      document.title = `${getHireTalentTitleMetaSegment(landing)} - ${brand}`
+      return
+    }
+  }
+
+  if (to.name === 'job-search') {
+    document.title = `Search Freelance Jobs on ${brand}`
+    return
+  }
+
+  if (to.name === 'talent-search') {
+    document.title = `Search Freelance Talent on ${brand}`
+    return
+  }
+
+  if (to.name === 'freelance-jobs-index') {
+    document.title = `Freelance Jobs on ${brand}: Work Remote & Earn Online`
+    return
+  }
+
   const pageTitle = to.meta.title as string | undefined
-  
+
   if (to.name === 'home') {
-    document.title = baseTitle
+    document.title = homeTitle
+  } else if (to.name === 'login') {
+    document.title = `${brand} Login - Log in to your ${brand} account`
+  } else if (to.name === 'signup') {
+    document.title = `Sign up for ${brand} | Client & Freelancer Accounts`
   } else {
-    document.title = pageTitle ? `${pageTitle} | Downwork` : baseTitle
+    document.title = pageTitle ? `${pageTitle} - ${brand}` : homeTitle
   }
 })
 

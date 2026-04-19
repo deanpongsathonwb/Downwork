@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div>
     <section class="bg-gradient-to-br from-slate-900 to-green-950 text-white py-20 px-4">
       <div class="max-w-3xl mx-auto text-center">
@@ -88,10 +88,21 @@
 
         <!-- 5 -->
         <div id="your-rights">
-          <h2 class="text-2xl font-bold text-slate-900 mb-5 flex items-center gap-3">
+          <h2
+            id="your-privacy-choices"
+            class="text-2xl font-bold text-slate-900 mb-5 flex scroll-mt-24 items-center gap-3"
+          >
             <span class="w-8 h-8 rounded-full bg-green-100 text-green-700 text-sm font-bold flex items-center justify-center shrink-0">5</span>
             Your Rights & Choices
           </h2>
+          <div id="ca-notice" class="mb-6 scroll-mt-24 rounded-xl border border-slate-200 bg-slate-50 p-5">
+            <h3 class="font-semibold text-slate-900">California Notice at Collection</h3>
+            <p class="mt-2 text-sm leading-relaxed text-slate-600">
+              If you are a California resident, we may collect the categories of personal information described in
+              this policy. You have the right to know, delete, and opt out of certain sharing. Use the contact
+              details in this policy to submit requests.
+            </p>
+          </div>
           <div class="grid md:grid-cols-2 gap-4">
             <div v-for="right in rights" :key="right.title" class="bg-white border border-slate-200 rounded-xl p-5">
               <h3 class="font-semibold text-slate-800 mb-1">{{ right.title }}</h3>

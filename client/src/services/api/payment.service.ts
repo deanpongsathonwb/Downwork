@@ -7,6 +7,7 @@ import type {
   WithdrawalPayload,
   AddFundsPayload,
   ConnectsPackage,
+  ConnectsBalanceResponse,
 } from '@/types'
 import type { PaymentMethod } from '@/types'
 
@@ -56,7 +57,7 @@ class PaymentService extends BaseService {
   }
 
   getConnectsBalance() {
-    return this.get<{ balance: number; history: unknown[] }>('/connects')
+    return this.get<ConnectsBalanceResponse>('/connects')
   }
 
   buyConnects(packageId: string) {

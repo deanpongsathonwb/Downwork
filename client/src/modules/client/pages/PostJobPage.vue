@@ -1,5 +1,13 @@
 <template>
   <div class="max-w-3xl space-y-6">
+    <div
+      v-if="aiAssistEntry"
+      class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-950"
+      role="status"
+    >
+      <strong class="font-semibold">AI assist is on.</strong>
+      Describe your job below — smarter suggestions are coming soon; you can edit everything before you publish.
+    </div>
     <div class="flex items-center gap-3">
       <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
         <svg class="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -196,8 +204,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, reactive, computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useJobStore } from '@/stores/job.store'
 import AppInput from '@/components/ui/AppInput.vue'
 import AppTextarea from '@/components/ui/AppTextarea.vue'
@@ -205,7 +213,10 @@ import AppSelect from '@/components/ui/AppSelect.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppFileUpload from '@/components/ui/AppFileUpload.vue'
 
+const route = useRoute()
 const router = useRouter()
+
+const aiAssistEntry = computed(() => route.query.assist === 'ai')
 const jobStore = useJobStore()
 const step = ref(0)
 const publishing = ref(false)
@@ -316,6 +327,11 @@ async function publishJob(): Promise<void> {
       currency: 'USD',
     },
     skills: form.skills,
+    visibility: form.visibility,
+    location: form.isRemote ? 'Remote' : undefined,
+    screeningQuestions: form.questions
+      .filter((q) => q.question.trim())
+      .map((q, i) => ({ id: `sq-${i}`, question: q.question.trim(), required: q.required })),
   })
   publishing.value = false
   if (job) router.push('/client/jobs')

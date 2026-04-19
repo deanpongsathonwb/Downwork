@@ -11,6 +11,9 @@ export const useToastStore = defineStore('toast', () => {
   const toasts = ref<Toast[]>([])
 
   function add(toast: Omit<Toast, 'id'>): string {
+    if (!TOAST_CONFIG.enabled) {
+      return ''
+    }
     const id = `toast_${Date.now()}_${Math.random().toString(36).slice(2)}`
     const newToast: Toast = { id, duration: TOAST_CONFIG.defaultDuration, ...toast }
     toasts.value.push(newToast)

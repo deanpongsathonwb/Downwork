@@ -103,6 +103,7 @@ function statusVariant(status: string): 'green' | 'slate' | 'blue' | 'yellow' | 
     open: 'green',
     closed: 'slate',
     draft: 'yellow',
+    pending_verification: 'yellow',
     in_progress: 'blue',
   }
   return map[status] ?? 'slate'

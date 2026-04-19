@@ -58,7 +58,7 @@ export class ChatService {
         conversationId,
         senderId,
         content: dto.content,
-        type: dto.type ?? 'text',
+        type: (dto.type as any) ?? 'text',
       },
       include: { sender: { select: { id: true, firstName: true, lastName: true, avatar: true } } },
     });

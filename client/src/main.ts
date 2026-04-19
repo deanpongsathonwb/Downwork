@@ -54,7 +54,3 @@ app.use(router)
 
 // 3. Mount
 app.mount('#app')
-
-if (APP_CONFIG.isDev) {
-  logger.info(`Downwork v${APP_CONFIG.version} [${APP_CONFIG.mode}]`, undefined, 'Bootstrap')
-}

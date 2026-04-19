@@ -19,6 +19,13 @@ class AuthService extends BaseService {
     return this.post<AuthResult>('/register', payload)
   }
 
+  /** Debounced from registration form; `false` = email already registered. */
+  registerEmailAvailable(email: string) {
+    return this.get<{ available: boolean }>('/register/email-available', {
+      params: { email },
+    })
+  }
+
   logout() {
     return this.post<void>('/logout')
   }

@@ -1,4 +1,5 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PrismaService } from '../../../prisma/prisma.service';
@@ -11,11 +12,19 @@ interface JwtPayload {
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(private prisma: PrismaService) {
+  constructor(
+    private prisma: PrismaService,
+    config: ConfigService,
+  ) {
+    const secret = config.get<string>('jwt.accessSecret');
+    if (!secret) {
+      throw new Error('FATAL: JWT_ACCESS_SECRET is not configured');
+    }
+
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: process.env.JWT_ACCESS_SECRET ?? 'downwork-access-secret-dev-only',
+      secretOrKey: secret,
     });
   }
 
@@ -32,10 +41,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         status: true,
         isEmailVerified: true,
         twoFactorEnabled: true,
+        deletedAt: true,
       },
     });
 
-    if (!user || user.status === 'banned' || user.status === 'deactivated') {
+    if (!user || user.deletedAt || user.status === 'banned' || user.status === 'deactivated') {
       throw new UnauthorizedException();
     }
 

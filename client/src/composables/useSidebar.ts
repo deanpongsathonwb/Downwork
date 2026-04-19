@@ -10,7 +10,7 @@ import type { SidebarItem, UserRole } from '@/types'
 
 const freelancerNav: SidebarItem[] = [
   { id: 'fl-dashboard', label: 'Dashboard', icon: 'grid', route: '/freelancer/dashboard', roles: ['freelancer'] },
-  { id: 'fl-find-jobs', label: 'Find Work', icon: 'search', route: '/browse-jobs', roles: ['freelancer'] },
+  { id: 'fl-find-jobs', label: 'Find Work', icon: 'search', route: '/hire', roles: ['freelancer'] },
   { id: 'fl-proposals', label: 'My Proposals', icon: 'file-text', route: '/freelancer/proposals', roles: ['freelancer'] },
   { id: 'fl-saved', label: 'Saved Jobs', icon: 'bookmark', route: '/freelancer/saved-jobs', roles: ['freelancer'] },
   { id: 'fl-contracts', label: 'Contracts', icon: 'briefcase', route: '/freelancer/contracts', roles: ['freelancer'] },
@@ -26,7 +26,7 @@ const clientNav: SidebarItem[] = [
   { id: 'cl-dashboard', label: 'Dashboard', icon: 'grid', route: '/client/dashboard', roles: ['client'] },
   { id: 'cl-new-job', label: 'Post a Job', icon: 'plus-circle', route: '/client/jobs/new', roles: ['client'] },
   { id: 'cl-jobs', label: 'My Jobs', icon: 'briefcase', route: '/client/jobs', roles: ['client'] },
-  { id: 'cl-find-talent', label: 'Find Talent', icon: 'search', route: '/browse-freelancers', roles: ['client'] },
+  { id: 'cl-find-talent', label: 'Find Talent', icon: 'search', route: '/search/talent', roles: ['client'] },
   { id: 'cl-contracts', label: 'Contracts', icon: 'file-check', route: '/client/contracts', roles: ['client'] },
   { id: 'cl-payments', label: 'Payments', icon: 'credit-card', route: '/client/payments', roles: ['client'] },
   { id: 'cl-messages', label: 'Messages', icon: 'message-circle', route: '/client/messages', roles: ['client'] },

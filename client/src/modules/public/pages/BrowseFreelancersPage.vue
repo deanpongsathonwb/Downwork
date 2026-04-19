@@ -78,7 +78,7 @@
         <div v-if="displayedFreelancers.length" class="grid grid-cols-1 gap-5">
           <FreelancerCard
             v-for="freelancer in displayedFreelancers"
-            :key="freelancer.userId"
+            :key="freelancer.id"
             :freelancer="freelancer"
             @message="handleMessage"
             @invite="handleInvite"

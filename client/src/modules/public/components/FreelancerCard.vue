@@ -1,7 +1,7 @@
 <template>
   <article class="bg-white rounded-2xl border border-slate-200 p-5 hover:shadow-md transition-all">
     <div class="flex items-start gap-4">
-      <RouterLink :to="`/freelancers/${freelancer.userId}`" :aria-label="`View profile of ${freelancer.firstName} ${freelancer.lastName}`">
+      <RouterLink :to="`/freelancers/${profileId}`" :aria-label="`View profile of ${freelancer.firstName} ${freelancer.lastName}`">
         <UserAvatar
           :name="`${freelancer.firstName} ${freelancer.lastName}`"
           :src="freelancer.avatar"
@@ -15,7 +15,7 @@
           <div>
             <div class="flex items-center gap-2 mb-0.5 flex-wrap">
               <RouterLink
-                :to="`/freelancers/${freelancer.userId}`"
+                :to="`/freelancers/${profileId}`"
                 class="font-bold text-slate-900 hover:text-green-600 transition-colors text-lg"
               >
                 {{ freelancer.firstName }} {{ freelancer.lastName }}
@@ -36,10 +36,10 @@
             <div class="flex items-center gap-3 mt-1.5 text-xs text-slate-500 flex-wrap">
               <div class="flex items-center gap-1">
                 <StarRating :model-value="freelancer.rating" size="sm" show-value />
-                <span>({{ freelancer.totalReviews }} reviews)</span>
+                <span>({{ reviewCount }} reviews)</span>
               </div>
-              <span class="font-semibold text-green-700">{{ freelancer.jobSuccessScore ?? freelancer.successRate }}% JSS</span>
-              <span>{{ freelancer.totalJobsDone }} jobs</span>
+              <span class="font-semibold text-green-700">{{ jssPercent }}% JSS</span>
+              <span>{{ jobsDone }} jobs</span>
               <span>{{ freelancer.location }}</span>
             </div>
           </div>
@@ -62,7 +62,7 @@
 
         <div class="flex flex-wrap gap-1.5 mt-3">
           <span
-            v-for="skill in freelancer.skills.slice(0, 5)"
+            v-for="skill in skillChips"
             :key="skill.id"
             class="text-xs bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg font-medium"
           >
@@ -71,11 +71,11 @@
         </div>
 
         <div class="flex gap-2 mt-4 pt-3 border-t border-slate-100">
-          <RouterLink :to="`/freelancers/${freelancer.userId}`">
+          <RouterLink :to="`/freelancers/${profileId}`">
             <AppButton variant="outline" size="sm">View Profile</AppButton>
           </RouterLink>
-          <AppButton size="sm" @click="emit('message', freelancer.userId)">Message</AppButton>
-          <AppButton variant="outline" size="sm" @click="emit('invite', freelancer.userId)">Invite to Job</AppButton>
+          <AppButton size="sm" @click="emit('message', profileId)">Message</AppButton>
+          <AppButton variant="outline" size="sm" @click="emit('invite', profileId)">Invite to Job</AppButton>
         </div>
       </div>
     </div>
@@ -98,6 +98,42 @@ const emit = defineEmits<{
   message: [userId: string]
   invite: [userId: string]
 }>()
+
+/** List API merges profile onto User — has `id`; nested profile uses `userId` */
+const profileId = computed(() => props.freelancer.userId ?? props.freelancer.id)
+
+const reviewCount = computed(() => {
+  const f = props.freelancer as Record<string, unknown>
+  const n = Number(f.totalReviews ?? f.reviewCount)
+  return Number.isFinite(n) ? n : 0
+})
+
+const jobsDone = computed(() => {
+  const f = props.freelancer as Record<string, unknown>
+  const n = Number(f.totalJobsDone ?? f.completedJobs)
+  return Number.isFinite(n) ? n : 0
+})
+
+const jssPercent = computed(() => {
+  const f = props.freelancer as Record<string, unknown>
+  const n = Number(f.jobSuccessScore ?? f.successRate)
+  return Number.isFinite(n) ? Math.round(n) : 0
+})
+
+const earningsK = computed(() => {
+  const n = Number(props.freelancer.totalEarnings)
+  return Number.isFinite(n) ? Math.round(n / 1000) : 0
+})
+
+const skillChips = computed(() => {
+  const s = props.freelancer.skills
+  if (!Array.isArray(s)) return []
+  return s.slice(0, 5).map((item, i) => {
+    if (typeof item === 'string') return { id: `skill-${i}`, name: item }
+    const o = item as { id?: string; name?: string }
+    return { id: o.id ?? `skill-${i}`, name: o.name ?? '' }
+  })
+})
 
 const badgeLabel = computed(() => {
   const map: Record<string, string> = {

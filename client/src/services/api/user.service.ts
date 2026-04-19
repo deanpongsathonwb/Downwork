@@ -1,5 +1,5 @@
 import { BaseService } from '@/services/http/base.service'
-import type { FreelancerProfile, ClientProfile, User } from '@/types'
+import type { FreelancerProfile, ClientProfile, User, PaginatedResponse } from '@/types'
 
 interface FreelancerSearchParams {
   search?: string
@@ -19,7 +19,7 @@ class UserService extends BaseService {
   }
 
   getFreelancers(params?: FreelancerSearchParams) {
-    return this.get<(User & FreelancerProfile)[]>('/freelancers', { params })
+    return this.get<PaginatedResponse<User & FreelancerProfile>>('/freelancers', { params })
   }
 
   getFreelancerProfile(userId: string) {

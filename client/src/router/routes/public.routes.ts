@@ -1,5 +1,30 @@
-import type { RouteRecordRaw } from 'vue-router'
-import { requiresAuth, requiresRole } from '@/router/guards/auth.guard'
+import type { RouteLocationNormalized, RouteLocationRaw, RouteRecordRaw } from 'vue-router'
+import { redirectClientFromPublicHome, requiresAuth, requiresRole } from '@/router/guards/auth.guard'
+import { getFreelanceJobLanding } from '@/constants/freelance-jobs.landing'
+import { getHireTalentLanding, resolveHireCategorySlug } from '@/constants/hire-talent.landing'
+
+function hireTalentLandingEnter(to: RouteLocationNormalized): RouteLocationRaw | true {
+  const raw = typeof to.params.slug === 'string' ? to.params.slug : ''
+  if (raw === 'more') {
+    return { name: 'talent-search' }
+  }
+  const resolved = resolveHireCategorySlug(raw)
+  if (!getHireTalentLanding(resolved)) {
+    return { name: 'static-404' }
+  }
+  return true
+}
+
+function freelanceJobsLandingEnter(to: RouteLocationNormalized): RouteLocationRaw | true {
+  const slug = typeof to.params.slug === 'string' ? to.params.slug : ''
+  const landing = getFreelanceJobLanding(slug)
+  if (!landing) {
+    return { name: 'static-404' }
+  }
+  const m = to.meta as { title?: string }
+  m.title = `${landing.heroSkill} Jobs`
+  return true
+}
 
 export const publicRoutes: RouteRecordRaw[] = [
   {
@@ -11,6 +36,7 @@ export const publicRoutes: RouteRecordRaw[] = [
         name: 'home',
         component: () => import('@/modules/public/pages/HomePage.vue'),
         meta: { title: 'Hire Top Freelance Talent with Confidence' },
+        beforeEnter: redirectClientFromPublicHome,
       },
       {
         path: 'browse-jobs',
@@ -19,10 +45,57 @@ export const publicRoutes: RouteRecordRaw[] = [
         meta: { title: 'Browse Jobs' },
       },
       {
+        path: 'freelance-jobs',
+        name: 'freelance-jobs-index',
+        component: () => import('@/modules/jobs/pages/FreelanceJobsIndexPage.vue'),
+        meta: { title: 'Freelance Jobs: Work Remote & Earn Online' },
+      },
+      {
+        path: 'freelance-jobs/:slug',
+        name: 'freelance-jobs-landing',
+        component: () => import('@/modules/jobs/pages/FreelanceJobsLandingPage.vue'),
+        meta: { title: 'Find Work' },
+        beforeEnter: freelanceJobsLandingEnter,
+      },
+      {
+        path: 'hire',
+        name: 'hire-hub',
+        component: () => import('@/modules/public/pages/HireHubPage.vue'),
+        meta: { title: 'Hire Freelancers' },
+      },
+      {
+        path: 'hire/:slug',
+        name: 'hire-talent-landing',
+        component: () => import('@/modules/public/pages/HireTalentLandingPage.vue'),
+        meta: { title: 'Hire talent' },
+        beforeEnter: hireTalentLandingEnter,
+      },
+      {
+        path: 'category/:slug',
+        name: 'hire-talent-category',
+        component: () => import('@/modules/public/pages/HireTalentLandingPage.vue'),
+        meta: { title: 'Hire talent' },
+        beforeEnter: hireTalentLandingEnter,
+      },
+      {
         path: 'browse-freelancers',
         name: 'browse-freelancers',
         component: () => import('@/modules/public/pages/BrowseFreelancersPage.vue'),
         meta: { title: 'Browse Freelancers' },
+      },
+      {
+        path: 'search/talent',
+        name: 'talent-search',
+        component: () => import('@/modules/public/pages/TalentSearchPage.vue'),
+        /** Browser title set in router `afterEach` (parallel to job search). */
+        meta: { title: 'Search Freelance Talent' },
+      },
+      {
+        path: 'search/jobs',
+        name: 'job-search',
+        component: () => import('@/modules/public/pages/JobSearchPage.vue'),
+        /** Browser title set in router `afterEach` (Upwork-style: “Search Freelance Jobs on …”). */
+        meta: { title: 'Search Freelance Jobs' },
       },
       {
         path: 'jobs/:id',
@@ -45,6 +118,10 @@ export const publicRoutes: RouteRecordRaw[] = [
       },
       {
         path: 'pricing',
+        redirect: '/pricing/client',
+      },
+      {
+        path: 'pricing/client',
         name: 'pricing',
         component: () => import('@/modules/public/pages/PricingPage.vue'),
         meta: { title: 'Pricing & Membership' },
