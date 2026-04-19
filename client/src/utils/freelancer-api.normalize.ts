@@ -157,6 +157,7 @@ export function normalizeFreelancerApiToProfile(raw: Record<string, unknown>): U
     certifications,
     workHistory: normalizeWorkHistory(experience),
     educationHistory: normalizeEducation(education),
+    languages,
     employmentHistory: [],
     totalEarnings,
     totalJobsDone: completedJobs,

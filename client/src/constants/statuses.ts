@@ -2,6 +2,7 @@ import type { JobStatus, ContractStatus, MilestoneStatus, ProposalStatus, Disput
 
 export const JOB_STATUS_LABELS: Record<JobStatus, string> = {
   draft: 'Draft',
+  pending_verification: 'Pending Verification',
   open: 'Open',
   in_progress: 'In Progress',
   completed: 'Completed',
