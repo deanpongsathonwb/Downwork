@@ -1,8 +1,0 @@
-{
-  "name": "downwork-monorepo",
-  "private": true,
-  "description": "Root package.json so Vercel/Git builds resolve Node project context at repo root (frontend lives in ./client).",
-  "engines": {
-    "node": ">=22"
-  }
-}
